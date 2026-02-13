@@ -107,10 +107,11 @@ SQLite, пять таблиц: `prizes`, `spins`, `admins`, `audit_log`, `settin
 - **log_audit() отказоустойчивость**: обёрнут в try-except + `logger.exception()` — ошибка записи аудита не должна ломать основной запрос
 - **Drag & Drop утечка обработчиков**: `enablePrizeDragDrop()` вызывается при каждом `loadPrizes()` — обязательно `removeEventListener` перед `addEventListener`
 - **Fetch без try-catch**: все admin fetch-вызовы должны иметь try-catch с показом `showMsg('Сетевая ошибка')`, иначе при обрыве сети — необработанный Promise rejection
-- **Админка: таблицы на мобильном**: на экранах <600px CSS превращает `<tr>` в карточки через `display: block` + `data-label` атрибуты на `<td>` + `::before` pseudo-элементы. Колонки с `.hide-mobile` скрываются. В аудит-логе имя админа добавляется в детали (т.к. столбец «Админ» скрыт)
+- **Админка: таблицы на мобильном**: на экранах <600px CSS превращает `<tr>` в карточки через `display: block` + `data-label` атрибуты на `<td>` + `::before` pseudo-элементы. `.hide-mobile` скрывает только внутренний ID БД и «Добавил» — Telegram ID всегда виден. В аудит-логе имя админа добавляется в детали (т.к. столбец «Админ» скрыт)
 - **Админка: confirm()**: заменён на кастомный `customConfirm(title, text)` → Promise<boolean>. Styled modal в тёмной теме
 - **Админка: Toast**: `showMsg()` теперь создаёт fixed-position toast внизу экрана (вместо `#msg` div вверху). Авто-удаление через 3.5с
 - **Админка: Dev mode**: перенесён из основного layout в вкладку «Настройки»
+- **Админка: ролевая модель фронтенда**: при инициализации проверяется admin-only эндпоинт (`/api/admin/audit`). Если 200 → `body.role-admin`, CSS-класс `.admin-only` показывает элементы. Viewer видит только вкладки «Результаты» и «Призы» (без кнопок действий). Drag & drop отключён для viewer
 - **SQLite WAL mode**: обязательно `PRAGMA journal_mode=WAL` при init_db() — позволяет читать во время записи. Без WAL при 300 одновременных запросах будут ошибки «database is locked»
 - **SQLite busy_timeout**: `connect_args={"timeout": 5}` в create_async_engine — при блокировке ждёт 5 сек вместо мгновенной ошибки
 - **Rate limiting по реальному IP**: nginx видит IP Nginx Proxy Manager (192.168.5.4), а не пользователя. Используем `map $http_x_real_ip` для получения реального IP из заголовка, иначе все 300 пользователей делят лимит 5 req/s
