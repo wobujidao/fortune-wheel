@@ -42,7 +42,7 @@ class Spin(Base):
     )
     prize_text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now
+        DateTime, nullable=False, default=datetime.now, index=True
     )
 
     prize: Mapped[Prize] = relationship(back_populates="spins")

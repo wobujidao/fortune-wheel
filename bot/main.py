@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Колесо Фортуны API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[WEBAPP_URL, "*"],
+    allow_origins=[WEBAPP_URL],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "X-Telegram-Init-Data"],
 )
 app.include_router(public_router)
 app.include_router(admin_router)

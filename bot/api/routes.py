@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import random
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 
 from bot.api.auth import get_current_user, require_admin, require_viewer, validate_init_data
 from bot.db.database import async_session
 from bot.db.models import Admin, Prize, Spin
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Pydantic-схемы
@@ -26,10 +30,6 @@ class PrizeOut(BaseModel):
     color: str
     position: int
     is_active: bool
-
-
-class SpinRequest(BaseModel):
-    init_data: str
 
 
 class SpinOut(BaseModel):
@@ -56,27 +56,27 @@ class SpinResultOut(BaseModel):
 
 
 class PrizeCreate(BaseModel):
-    text: str
-    icon: str
-    color: str
-    position: int = 0
+    text: str = Field(..., min_length=1, max_length=200)
+    icon: str = Field(..., min_length=1, max_length=10)
+    color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
+    position: int = Field(0, ge=0, le=100)
 
 
 class PrizeUpdate(BaseModel):
-    text: str | None = None
-    icon: str | None = None
-    color: str | None = None
-    position: int | None = None
+    text: str | None = Field(None, min_length=1, max_length=200)
+    icon: str | None = Field(None, min_length=1, max_length=10)
+    color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    position: int | None = Field(None, ge=0, le=100)
     is_active: bool | None = None
 
 
 class ReorderItem(BaseModel):
     id: int
-    position: int
+    position: int = Field(..., ge=0, le=100)
 
 
 class AdminCreate(BaseModel):
-    tg_user_id: int
+    tg_user_id: int = Field(..., gt=0)
     role: str = "admin"
 
 
@@ -128,13 +128,6 @@ async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
     tg_user_id = user["id"]
 
     async with async_session() as session:
-        # Проверяем, крутил ли уже
-        existing = await session.execute(
-            select(Spin).where(Spin.tg_user_id == tg_user_id)
-        )
-        if existing.scalar_one_or_none() is not None:
-            raise HTTPException(status_code=409, detail="Вы уже испытали удачу!")
-
         # Получаем активные призы
         result = await session.execute(
             select(Prize)
@@ -143,12 +136,12 @@ async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
         )
         prizes = result.scalars().all()
         if not prizes:
-            raise HTTPException(status_code=500, detail="Нет доступных призов")
+            raise HTTPException(status_code=503, detail="Нет доступных призов")
 
         # Случайный приз (равновероятно)
         prize = random.choice(prizes)
 
-        # Сохраняем результат
+        # Сохраняем результат — unique constraint на tg_user_id защищает от race condition
         spin_record = Spin(
             tg_user_id=tg_user_id,
             tg_username=user.get("username"),
@@ -158,7 +151,11 @@ async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
             prize_text=prize.text,
         )
         session.add(spin_record)
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(status_code=409, detail="Вы уже испытали удачу!")
 
     return SpinOut(
         prize_id=prize.id,
@@ -177,11 +174,9 @@ async def check_user(tg_user_id: int) -> CheckOut:
         )
         spin_record = result.scalar_one_or_none()
 
-    if spin_record is None:
-        return CheckOut(has_played=False)
+        if spin_record is None:
+            return CheckOut(has_played=False)
 
-    # Подтягиваем данные приза
-    async with async_session() as session:
         prize = await session.get(Prize, spin_record.prize_id)
 
     return CheckOut(
@@ -224,7 +219,7 @@ async def get_results(
 @admin_router.delete("/results/{spin_id}")
 async def delete_result(
     spin_id: int,
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     """Удалить запись вращения."""
     async with async_session() as session:
@@ -232,6 +227,10 @@ async def delete_result(
         spin_record = result.scalar_one_or_none()
         if spin_record is None:
             raise HTTPException(status_code=404, detail="Запись не найдена")
+        logger.info(
+            "Админ %d удалил вращение #%d (user=%d, prize=%s)",
+            user["id"], spin_id, spin_record.tg_user_id, spin_record.prize_text,
+        )
         await session.delete(spin_record)
         await session.commit()
     return {"status": "ok"}
@@ -239,12 +238,15 @@ async def delete_result(
 
 @admin_router.post("/reset")
 async def reset_results(
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     """Полный сброс результатов — все пользователи могут крутить заново."""
     async with async_session() as session:
+        count_result = await session.execute(select(func.count(Spin.id)))
+        count = count_result.scalar() or 0
         await session.execute(delete(Spin))
         await session.commit()
+    logger.info("Админ %d сбросил все результаты (%d записей)", user["id"], count)
     return {"status": "ok", "message": "Все результаты сброшены"}
 
 
@@ -295,7 +297,7 @@ async def export_results(
             s.tg_first_name or "",
             s.tg_last_name or "",
             s.prize_id,
-            s.prize_text,
+            s.prize_text or "",
             s.created_at.isoformat() if s.created_at else "",
         ])
 
@@ -334,7 +336,7 @@ async def admin_get_prizes(
 @admin_router.post("/prizes", response_model=PrizeOut)
 async def create_prize(
     data: PrizeCreate,
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> PrizeOut:
     """Добавить приз."""
     async with async_session() as session:
@@ -358,6 +360,7 @@ async def create_prize(
         await session.commit()
         await session.refresh(prize)
 
+    logger.info("Админ %d добавил приз: %s", user["id"], data.text)
     return PrizeOut(
         id=prize.id,
         text=prize.text,
@@ -372,7 +375,7 @@ async def create_prize(
 async def update_prize(
     prize_id: int,
     data: PrizeUpdate,
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> PrizeOut:
     """Редактировать приз."""
     async with async_session() as session:
@@ -385,6 +388,7 @@ async def update_prize(
         await session.commit()
         await session.refresh(prize)
 
+    logger.info("Админ %d обновил приз #%d", user["id"], prize_id)
     return PrizeOut(
         id=prize.id,
         text=prize.text,
@@ -398,7 +402,7 @@ async def update_prize(
 @admin_router.delete("/prizes/{prize_id}")
 async def delete_prize(
     prize_id: int,
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     """Удалить приз."""
     async with async_session() as session:
@@ -418,6 +422,7 @@ async def delete_prize(
                 status_code=400, detail="Минимум 2 активных сектора"
             )
 
+        logger.info("Админ %d удалил приз #%d (%s)", user["id"], prize_id, prize.text)
         await session.delete(prize)
         await session.commit()
     return {"status": "ok"}
@@ -471,21 +476,20 @@ async def create_admin_user(
         raise HTTPException(status_code=400, detail="Роль должна быть admin или viewer")
 
     async with async_session() as session:
-        existing = await session.execute(
-            select(Admin).where(Admin.tg_user_id == data.tg_user_id)
-        )
-        if existing.scalar_one_or_none() is not None:
-            raise HTTPException(status_code=409, detail="Пользователь уже существует")
-
         admin = Admin(
             tg_user_id=data.tg_user_id,
             role=data.role,
             added_by=user["id"],
         )
         session.add(admin)
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(status_code=409, detail="Пользователь уже существует")
         await session.refresh(admin)
 
+    logger.info("Админ %d добавил пользователя %d (роль=%s)", user["id"], data.tg_user_id, data.role)
     return AdminOut(
         id=admin.id,
         tg_user_id=admin.tg_user_id,
@@ -498,13 +502,14 @@ async def create_admin_user(
 @admin_router.delete("/users/{admin_id}")
 async def delete_admin_user(
     admin_id: int,
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     """Удалить админа / просмотрщика."""
     async with async_session() as session:
         admin = await session.get(Admin, admin_id)
         if admin is None:
             raise HTTPException(status_code=404, detail="Запись не найдена")
+        logger.info("Админ %d удалил пользователя %d (роль=%s)", user["id"], admin.tg_user_id, admin.role)
         await session.delete(admin)
         await session.commit()
     return {"status": "ok"}

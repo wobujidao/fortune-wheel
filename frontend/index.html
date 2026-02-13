@@ -7,7 +7,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  
+
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
@@ -53,13 +53,15 @@
 
   .wheel-outer {
     position: relative;
-    width: 330px;
-    height: 330px;
+    width: min(330px, 90vw);
+    height: min(330px, 90vw);
   }
 
   canvas#wheel {
     position: absolute;
     top: 15px; left: 15px;
+    width: calc(100% - 30px);
+    height: calc(100% - 30px);
     z-index: 2;
     border-radius: 50%;
   }
@@ -67,6 +69,8 @@
   canvas#lights {
     position: absolute;
     top: 0; left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 3;
     pointer-events: none;
   }
@@ -125,7 +129,7 @@
 
   .legend-text {
     font-size: 13.5px;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.95);
     line-height: 1.3;
   }
 
@@ -135,7 +139,7 @@
     color: #1a1a2e;
     font-size: 17px;
     font-weight: 700;
-    padding: 14px 44px;
+    padding: 16px 44px;
     border-radius: 50px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -145,6 +149,7 @@
     position: relative;
     overflow: hidden;
     margin-top: 4px;
+    min-height: 48px;
   }
 
   .spin-btn:hover:not(:disabled) {
@@ -188,7 +193,7 @@
     border-radius: 24px;
     padding: 32px 24px;
     text-align: center;
-    max-width: 340px;
+    max-width: min(340px, 90vw);
     width: 100%;
     border: 1px solid rgba(255, 215, 0, 0.3);
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -215,6 +220,7 @@
     line-height: 1.5;
     color: rgba(255,255,255,0.85);
     margin-bottom: 20px;
+    word-break: break-word;
   }
 
   .modal .close-btn {
@@ -223,9 +229,10 @@
     color: #1a1a2e;
     font-size: 15px;
     font-weight: 700;
-    padding: 12px 36px;
+    padding: 14px 36px;
     border-radius: 50px;
     cursor: pointer;
+    min-height: 48px;
   }
 
   .already-played {
@@ -352,10 +359,18 @@ const lCtx = lCanvas.getContext('2d');
 const LW = 330, LH = 330, LR = LW / 2;
 const numLights = 24;
 let lightPhase = 0;
+let lightAnimId = null;
 
 // ---- API-хелпер ----
 function apiHeaders() {
   return { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData };
+}
+
+// ---- HTML-экранирование ----
+function esc(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
 }
 
 // ---- Загрузка призов и проверка статуса ----
@@ -390,7 +405,7 @@ async function init() {
   initStars();
 
   // Проверяем, крутил ли пользователь
-  if (tgUser && tgUser.id) {
+  if (tgUser && tgUser.id > 0) {
     try {
       const res = await fetch('/api/check/' + tgUser.id);
       const data = await res.json();
@@ -413,7 +428,15 @@ function buildLegend() {
   PRIZES.forEach((p, i) => {
     const item = document.createElement('div');
     item.className = 'legend-item';
-    item.innerHTML = `<div class="legend-num" style="background:${p.color}">${i+1}</div><div class="legend-text">${p.icon} ${p.text}</div>`;
+    const num = document.createElement('div');
+    num.className = 'legend-num';
+    num.style.background = p.color;
+    num.textContent = i + 1;
+    const txt = document.createElement('div');
+    txt.className = 'legend-text';
+    txt.textContent = p.icon + ' ' + p.text;
+    item.appendChild(num);
+    item.appendChild(txt);
     legendEl.appendChild(item);
   });
 }
@@ -462,7 +485,7 @@ function drawLights() {
 
 function animateLights() {
   drawLights();
-  requestAnimationFrame(animateLights);
+  lightAnimId = requestAnimationFrame(animateLights);
 }
 
 setInterval(() => { lightPhase = (lightPhase + 1) % 3; }, 400);
@@ -540,7 +563,8 @@ function drawWheel(angle) {
 async function spin() {
   if (spinning || hasPlayed) return;
   spinning = true;
-  document.getElementById('spinBtn').disabled = true;
+  const btn = document.getElementById('spinBtn');
+  btn.disabled = true;
 
   // Запрашиваем приз у сервера
   let serverPrize = null;
@@ -551,7 +575,6 @@ async function spin() {
     } else {
       const err = await res.json().catch(() => ({}));
       if (res.status === 409) {
-        // Уже крутил
         hasPlayed = true;
         spinning = false;
         document.getElementById('controls').style.display = 'none';
@@ -559,23 +582,19 @@ async function spin() {
         document.getElementById('prizeReminder').textContent = '🎁 Вы уже испытали удачу!';
         return;
       }
-      console.error('Ошибка API:', err.detail || res.status);
+      throw new Error(err.detail || 'Ошибка сервера');
     }
   } catch (e) {
-    console.error('Ошибка сети:', e);
+    console.error('Ошибка:', e);
+    spinning = false;
+    btn.disabled = false;
+    return;
   }
 
   // Определяем индекс приза на колесе
-  let prizeIdx = 0;
-  if (serverPrize) {
-    prizeIdx = PRIZES.findIndex(p => p.id === serverPrize.prize_id);
-    if (prizeIdx === -1) prizeIdx = 0;
-    userResult = { text: serverPrize.prize_text, icon: serverPrize.prize_icon, color: serverPrize.prize_color };
-  } else {
-    // Фоллбэк: случайный приз (если нет связи с API)
-    prizeIdx = Math.floor(Math.random() * PRIZES.length);
-    userResult = PRIZES[prizeIdx];
-  }
+  let prizeIdx = PRIZES.findIndex(p => p.id === serverPrize.prize_id);
+  if (prizeIdx === -1) prizeIdx = 0;
+  userResult = { text: serverPrize.prize_text, icon: serverPrize.prize_icon, color: serverPrize.prize_color };
 
   // Анимация вращения к нужному сектору
   const segCenter = prizeIdx * segAngle + segAngle / 2;
@@ -622,8 +641,8 @@ async function spin() {
 function showResult(idx) {
   launchConfetti();
   setTimeout(() => {
-    const icon = userResult.icon || PRIZES[idx].icon;
-    const text = userResult.text || PRIZES[idx].text;
+    const icon = (userResult && userResult.icon) || (PRIZES[idx] && PRIZES[idx].icon) || '🎁';
+    const text = (userResult && userResult.text) || (PRIZES[idx] && PRIZES[idx].text) || 'Подарок';
     document.getElementById('modalIcon').textContent = icon;
     document.getElementById('modalText').textContent = 'Ваш подарок: ' + text;
     document.getElementById('modal').classList.add('show');
@@ -655,7 +674,9 @@ function launchConfetti() {
   setTimeout(() => { c.innerHTML = ''; }, 4000);
 }
 
+let starsAnimId = null;
 function initStars() {
+  if (starsAnimId) cancelAnimationFrame(starsAnimId);
   const c = document.getElementById('stars');
   const cx = c.getContext('2d');
   c.width = window.innerWidth;
@@ -674,15 +695,13 @@ function initStars() {
       cx.fillStyle = `rgba(255,255,255,${s.a})`;
       cx.fill();
     });
-    requestAnimationFrame(draw);
+    starsAnimId = requestAnimationFrame(draw);
   }
   draw();
 }
 
 window.addEventListener('resize', () => {
-  const c = document.getElementById('stars');
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
+  initStars();
 });
 
 // ---- Запуск ----

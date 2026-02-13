@@ -268,15 +268,23 @@ function filterResults() {
 
 function renderResults(data) {
   const tbody = document.getElementById('resultsBody');
-  tbody.innerHTML = data.map(s => `<tr>
-    <td>${s.id}</td>
-    <td>${s.tg_user_id}</td>
-    <td>@${s.tg_username || '—'}</td>
-    <td>${s.tg_first_name || ''} ${s.tg_last_name || ''}</td>
-    <td>${s.prize_text}</td>
-    <td>${s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''}</td>
-    <td><button class="btn btn-red btn-small" onclick="deleteResult(${s.id})">✕</button></td>
-  </tr>`).join('');
+  tbody.innerHTML = '';
+  data.forEach(s => {
+    const tr = document.createElement('tr');
+    [s.id, s.tg_user_id, '@' + (s.tg_username || '—'), (s.tg_first_name || '') + ' ' + (s.tg_last_name || ''), s.prize_text, s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''].forEach(val => {
+      const td = document.createElement('td');
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    const tdBtn = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-red btn-small';
+    btn.textContent = '✕';
+    btn.addEventListener('click', () => deleteResult(s.id));
+    tdBtn.appendChild(btn);
+    tr.appendChild(tdBtn);
+    tbody.appendChild(tr);
+  });
 }
 
 async function deleteResult(id) {
@@ -326,14 +334,28 @@ async function loadPrizes() {
   if (!res.ok) return;
   const data = await res.json();
   const tbody = document.getElementById('prizesBody');
-  tbody.innerHTML = data.map(p => `<tr>
-    <td>${p.position}</td>
-    <td style="font-size:20px">${p.icon}</td>
-    <td>${p.text}</td>
-    <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${p.color}"></span> ${p.color}</td>
-    <td>${p.is_active ? '✅' : '❌'}</td>
-    <td><button class="btn btn-red btn-small" onclick="deletePrize(${p.id})">✕</button></td>
-  </tr>`).join('');
+  tbody.innerHTML = '';
+  data.forEach(p => {
+    const tr = document.createElement('tr');
+    const tdPos = document.createElement('td'); tdPos.textContent = p.position; tr.appendChild(tdPos);
+    const tdIcon = document.createElement('td'); tdIcon.style.fontSize = '20px'; tdIcon.textContent = p.icon; tr.appendChild(tdIcon);
+    const tdText = document.createElement('td'); tdText.textContent = p.text; tr.appendChild(tdText);
+    const tdColor = document.createElement('td');
+    const span = document.createElement('span');
+    span.style.cssText = 'display:inline-block;width:20px;height:20px;border-radius:4px;background:' + p.color;
+    tdColor.appendChild(span);
+    tdColor.append(' ' + p.color);
+    tr.appendChild(tdColor);
+    const tdActive = document.createElement('td'); tdActive.textContent = p.is_active ? '✅' : '❌'; tr.appendChild(tdActive);
+    const tdBtn = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-red btn-small';
+    btn.textContent = '✕';
+    btn.addEventListener('click', () => deletePrize(p.id));
+    tdBtn.appendChild(btn);
+    tr.appendChild(tdBtn);
+    tbody.appendChild(tr);
+  });
 }
 
 function showAddPrize() {
@@ -379,13 +401,23 @@ async function loadUsers() {
   if (!res.ok) return;
   const data = await res.json();
   const tbody = document.getElementById('usersBody');
-  tbody.innerHTML = data.map(u => `<tr>
-    <td>${u.id}</td>
-    <td>${u.tg_user_id}</td>
-    <td>${u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик'}</td>
-    <td>${u.added_by || '—'}</td>
-    <td><button class="btn btn-red btn-small" onclick="deleteUser(${u.id})">✕</button></td>
-  </tr>`).join('');
+  tbody.innerHTML = '';
+  data.forEach(u => {
+    const tr = document.createElement('tr');
+    [u.id, u.tg_user_id, u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик', u.added_by || '—'].forEach(val => {
+      const td = document.createElement('td');
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    const tdBtn = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-red btn-small';
+    btn.textContent = '✕';
+    btn.addEventListener('click', () => deleteUser(u.id));
+    tdBtn.appendChild(btn);
+    tr.appendChild(tdBtn);
+    tbody.appendChild(tr);
+  });
 }
 
 async function addUser() {
