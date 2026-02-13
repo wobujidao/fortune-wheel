@@ -522,13 +522,6 @@ function apiHeaders() {
   return { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData };
 }
 
-// ---- HTML-экранирование ----
-function esc(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
-}
-
 // ---- Загрузка призов и проверка статуса ----
 async function init() {
   try {

@@ -31,8 +31,12 @@ def validate_init_data(init_data: str, bot_token: str = BOT_TOKEN) -> dict[str, 
 
     # Проверяем auth_date — не старше 1 часа
     auth_date = data.get("auth_date")
-    if auth_date and abs(time.time() - int(auth_date)) > 3600:
-        raise ValueError("initData просрочены")
+    if auth_date:
+        try:
+            if abs(time.time() - int(auth_date)) > 3600:
+                raise ValueError("initData просрочены")
+        except (ValueError, OverflowError):
+            raise ValueError("Невалидный auth_date")
 
     # data_check_string: отсортированные key=value через \n
     data_check_string = "\n".join(
@@ -50,7 +54,10 @@ def validate_init_data(init_data: str, bot_token: str = BOT_TOKEN) -> dict[str, 
     # Парсим user JSON
     user_raw = data.get("user")
     if user_raw:
-        data["user"] = json.loads(unquote(user_raw))
+        try:
+            data["user"] = json.loads(unquote(user_raw))
+        except (json.JSONDecodeError, ValueError):
+            raise ValueError("Невалидные данные пользователя в initData")
 
     return data
 

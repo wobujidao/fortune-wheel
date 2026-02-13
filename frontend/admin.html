@@ -397,16 +397,20 @@ function renderResults(data) {
 
 async function deleteResult(id) {
   if (!confirm('Удалить запись #' + id + '?')) return;
-  const res = await fetch('/api/admin/results/' + id, { method: 'DELETE', headers: headers() });
-  if (res.ok) { showMsg('Запись удалена', true); loadResults(); }
-  else showMsg('Ошибка удаления', false);
+  try {
+    const res = await fetch('/api/admin/results/' + id, { method: 'DELETE', headers: headers() });
+    if (res.ok) { showMsg('Запись удалена', true); loadResults(); }
+    else showMsg('Ошибка удаления', false);
+  } catch (e) { showMsg('Сетевая ошибка', false); }
 }
 
 async function resetResults() {
   if (!confirm('Сбросить ВСЕ результаты? Все пользователи смогут крутить заново.')) return;
-  const res = await fetch('/api/admin/reset', { method: 'POST', headers: headers() });
-  if (res.ok) { showMsg('Все результаты сброшены', true); loadResults(); }
-  else showMsg('Ошибка сброса', false);
+  try {
+    const res = await fetch('/api/admin/reset', { method: 'POST', headers: headers() });
+    if (res.ok) { showMsg('Все результаты сброшены', true); loadResults(); }
+    else showMsg('Ошибка сброса', false);
+  } catch (e) { showMsg('Сетевая ошибка', false); }
 }
 
 async function exportCSV() {
@@ -438,9 +442,11 @@ async function exportCSV() {
 
 // ---- Призы ----
 async function loadPrizes() {
-  const res = await fetch('/api/admin/prizes', { headers: headers() });
-  if (!res.ok) return;
-  const data = await res.json();
+  try {
+    const res = await fetch('/api/admin/prizes', { headers: headers() });
+    if (!res.ok) { showMsg('Ошибка загрузки призов', false); return; }
+    var data = await res.json();
+  } catch (e) { showMsg('Сетевая ошибка', false); return; }
   const tbody = document.getElementById('prizesBody');
   tbody.innerHTML = '';
   data.forEach(p => {
@@ -548,9 +554,12 @@ async function deletePrize(id) {
 
 // ---- Пользователи ----
 async function loadUsers() {
-  const res = await fetch('/api/admin/users', { headers: headers() });
-  if (!res.ok) return;
-  const data = await res.json();
+  let data;
+  try {
+    const res = await fetch('/api/admin/users', { headers: headers() });
+    if (!res.ok) { showMsg('Ошибка загрузки пользователей', false); return; }
+    data = await res.json();
+  } catch (e) { showMsg('Сетевая ошибка', false); return; }
   const tbody = document.getElementById('usersBody');
   tbody.innerHTML = '';
   data.forEach(u => {
@@ -596,9 +605,11 @@ async function addUser() {
 
 async function deleteUser(id) {
   if (!confirm('Удалить пользователя?')) return;
-  const res = await fetch('/api/admin/users/' + id, { method: 'DELETE', headers: headers() });
-  if (res.ok) { showMsg('Удалено', true); loadUsers(); }
-  else showMsg('Ошибка', false);
+  try {
+    const res = await fetch('/api/admin/users/' + id, { method: 'DELETE', headers: headers() });
+    if (res.ok) { showMsg('Удалено', true); loadUsers(); }
+    else showMsg('Ошибка', false);
+  } catch (e) { showMsg('Сетевая ошибка', false); }
 }
 
 // ---- Статистика ----
@@ -611,6 +622,7 @@ function renderStats() {
   const prizeCounts = {};
   allResults.forEach(s => { prizeCounts[s.prize_text] = (prizeCounts[s.prize_text] || 0) + 1; });
   const prizeEntries = Object.entries(prizeCounts).sort((a, b) => b[1] - a[1]);
+  if (!prizeEntries.length) return;
   const maxPrize = prizeEntries[0][1];
 
   const prizeSection = document.createElement('div');
@@ -681,6 +693,13 @@ function enablePrizeDragDrop() {
   const tbody = document.getElementById('prizesBody');
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.setAttribute('draggable', 'true');
+    // Снимаем старые обработчики перед добавлением новых
+    tr.removeEventListener('dragstart', handleDragStart);
+    tr.removeEventListener('dragover', handleDragOver);
+    tr.removeEventListener('dragenter', handleDragEnter);
+    tr.removeEventListener('dragleave', handleDragLeave);
+    tr.removeEventListener('drop', handleDrop);
+    tr.removeEventListener('dragend', handleDragEnd);
     tr.addEventListener('dragstart', handleDragStart);
     tr.addEventListener('dragover', handleDragOver);
     tr.addEventListener('dragenter', handleDragEnter);

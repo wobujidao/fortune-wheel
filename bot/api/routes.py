@@ -34,11 +34,14 @@ async def log_audit(
     admin_id: int, admin_name: str | None, action: str, details: str | None = None,
 ) -> None:
     """Записать действие в аудит-лог."""
-    async with async_session() as session:
-        session.add(AuditLog(
-            admin_id=admin_id, admin_name=admin_name, action=action, details=details,
-        ))
-        await session.commit()
+    try:
+        async with async_session() as session:
+            session.add(AuditLog(
+                admin_id=admin_id, admin_name=admin_name, action=action, details=details,
+            ))
+            await session.commit()
+    except Exception:
+        logger.exception("Ошибка записи аудит-лога: action=%s, admin=%d", action, admin_id)
 
 
 # ---------------------------------------------------------------------------
@@ -532,9 +535,9 @@ async def get_admin_users(
                 try:
                     chat = await bot.get_chat(a.tg_user_id)
                     a.tg_username = chat.username
-                    a.tg_first_name = chat.first_name
-                except Exception:
-                    pass
+                    a.tg_first_name = chat.first_name or "—"
+                except (Exception, BaseException) as exc:
+                    logger.debug("Не удалось получить инфо для %d: %s", a.tg_user_id, exc)
         await session.commit()
 
     return [
@@ -569,8 +572,8 @@ async def create_admin_user(
         chat = await bot.get_chat(data.tg_user_id)
         tg_username = chat.username
         tg_first_name = chat.first_name
-    except Exception:
-        logger.debug("Не удалось получить инфо для Telegram ID %d", data.tg_user_id)
+    except (Exception, BaseException) as exc:
+        logger.debug("Не удалось получить инфо для Telegram ID %d: %s", data.tg_user_id, exc)
 
     async with async_session() as session:
         admin = Admin(
