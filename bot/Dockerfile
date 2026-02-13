@@ -1,6 +1,7 @@
 FROM python:3.13-slim
 
 RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -14,6 +15,4 @@ RUN mkdir -p /app/data && chown -R appuser:appuser /app
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-USER appuser
-
-CMD ["python", "-m", "bot.main"]
+ENTRYPOINT ["/app/bot/entrypoint.sh"]
