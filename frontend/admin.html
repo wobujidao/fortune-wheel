@@ -155,7 +155,7 @@
     </div>
     <table>
       <thead>
-        <tr><th>ID</th><th>Telegram</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
+        <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
       </thead>
       <tbody id="resultsBody"></tbody>
     </table>
@@ -270,6 +270,7 @@ function renderResults(data) {
   const tbody = document.getElementById('resultsBody');
   tbody.innerHTML = data.map(s => `<tr>
     <td>${s.id}</td>
+    <td>${s.tg_user_id}</td>
     <td>@${s.tg_username || '—'}</td>
     <td>${s.tg_first_name || ''} ${s.tg_last_name || ''}</td>
     <td>${s.prize_text}</td>
