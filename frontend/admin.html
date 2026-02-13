@@ -369,6 +369,12 @@
 
     .stat-bar-label { width: 35%; min-width: 60px; font-size: 11px; }
   }
+
+  /* ---- Role-based visibility ---- */
+  .admin-only { display: none; }
+  body.role-admin .admin-only { display: revert; }
+  /* Tabs: flex items need flex display */
+  body.role-admin .tab.admin-only { display: inline-flex; }
 </style>
 </head>
 <body>
@@ -392,9 +398,9 @@
   <div class="tabs">
     <div class="tab active" onclick="showTab('results')">📊 Результаты</div>
     <div class="tab" onclick="showTab('prizes')">🎁 Призы</div>
-    <div class="tab" onclick="showTab('users')">👥 Доступ</div>
-    <div class="tab" onclick="showTab('settings')">⚙️ Настройки</div>
-    <div class="tab" onclick="showTab('audit')">📋 Лог</div>
+    <div class="tab admin-only" onclick="showTab('users')">👥 Доступ</div>
+    <div class="tab admin-only" onclick="showTab('settings')">⚙️ Настройки</div>
+    <div class="tab admin-only" onclick="showTab('audit')">📋 Лог</div>
   </div>
 
   <!-- ============ Результаты ============ -->
@@ -410,7 +416,7 @@
       </div>
       <div class="actions">
         <button class="btn btn-gold" onclick="exportCSV()">📥 CSV</button>
-        <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
+        <button class="btn btn-red admin-only" onclick="resetResults()">🔄 Сбросить всё</button>
       </div>
       <div id="statsContainer"></div>
       <table>
@@ -430,7 +436,7 @@
   <div id="panel-prizes" class="panel">
     <div class="panel-loading" id="loadingPrizes"><div class="panel-spinner"></div></div>
     <div id="prizesContent" style="display:none;">
-      <div class="actions">
+      <div class="actions admin-only">
         <button class="btn btn-green" onclick="showAddPrize()">➕ Добавить приз</button>
       </div>
       <div id="prizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
@@ -544,6 +550,10 @@ if (tg) {
   tg.ready();
   initData = tg.initData || '';
 }
+
+let userRole = 'viewer'; // определяется в initAdmin()
+
+function isAdmin() { return userRole === 'admin'; }
 
 function headers() {
   return { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData };
@@ -692,14 +702,16 @@ function renderResults(data) {
     tdDate.dataset.label = 'Дата';
     tr.appendChild(tdDate);
 
-    const tdBtn = document.createElement('td');
-    tdBtn.className = 'td-actions';
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-red btn-small';
-    btn.textContent = '✕';
-    btn.addEventListener('click', () => deleteResult(s.id));
-    tdBtn.appendChild(btn);
-    tr.appendChild(tdBtn);
+    if (isAdmin()) {
+      const tdBtn = document.createElement('td');
+      tdBtn.className = 'td-actions';
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-red btn-small';
+      btn.textContent = '✕';
+      btn.addEventListener('click', () => deleteResult(s.id));
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+    }
 
     tbody.appendChild(tr);
   });
@@ -807,24 +819,26 @@ async function loadPrizes() {
     tdActive.dataset.label = 'Активен';
     tr.appendChild(tdActive);
 
-    const tdBtn = document.createElement('td');
-    tdBtn.className = 'td-actions';
-    tdBtn.style.cssText = 'display:flex; gap:4px;';
-    const btnEdit = document.createElement('button');
-    btnEdit.className = 'btn btn-gold btn-small';
-    btnEdit.textContent = '✏️';
-    btnEdit.addEventListener('click', () => editPrize(p));
-    tdBtn.appendChild(btnEdit);
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-red btn-small';
-    btn.textContent = '✕';
-    btn.addEventListener('click', () => deletePrize(p.id));
-    tdBtn.appendChild(btn);
-    tr.appendChild(tdBtn);
+    if (isAdmin()) {
+      const tdBtn = document.createElement('td');
+      tdBtn.className = 'td-actions';
+      tdBtn.style.cssText = 'display:flex; gap:4px;';
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn btn-gold btn-small';
+      btnEdit.textContent = '✏️';
+      btnEdit.addEventListener('click', () => editPrize(p));
+      tdBtn.appendChild(btnEdit);
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-red btn-small';
+      btn.textContent = '✕';
+      btn.addEventListener('click', () => deletePrize(p.id));
+      tdBtn.appendChild(btn);
+      tr.appendChild(tdBtn);
+    }
 
     tbody.appendChild(tr);
   });
-  enablePrizeDragDrop();
+  if (isAdmin()) enablePrizeDragDrop();
   hideLoading('Prizes');
 }
 
@@ -1290,7 +1304,17 @@ async function initAdmin() {
     const res = await fetch('/api/admin/results', { headers: headers() });
     if (res.ok) {
       document.getElementById('app').style.display = 'block';
-      document.getElementById('devModeSwitch').checked = localStorage.getItem('devMode') === '1';
+
+      // Определяем роль: пробуем admin-only эндпоинт
+      try {
+        const roleRes = await fetch('/api/admin/audit', { headers: headers() });
+        if (roleRes.ok) {
+          userRole = 'admin';
+          document.body.classList.add('role-admin');
+          document.getElementById('devModeSwitch').checked = localStorage.getItem('devMode') === '1';
+        }
+      } catch {}
+
       loadResults();
     } else {
       document.getElementById('noAccess').style.display = 'block';
