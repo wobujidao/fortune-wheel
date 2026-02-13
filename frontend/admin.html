@@ -270,8 +270,22 @@ async function resetResults() {
   else showMsg('Ошибка сброса', false);
 }
 
-function exportCSV() {
-  window.open('/api/admin/export?' + new URLSearchParams({ _tg: initData }), '_blank');
+async function exportCSV() {
+  try {
+    const res = await fetch('/api/admin/export', { headers: headers() });
+    if (!res.ok) throw new Error(res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'results.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showMsg('Ошибка экспорта', false);
+  }
 }
 
 // ---- Призы ----

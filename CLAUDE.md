@@ -17,7 +17,7 @@ Telegram Mini App "Wheel of Fortune" (Колесо Фортуны) for employees
 
 ## Current State
 
-Frontend (`frontend/index.html`) — полностью реализован. Backend (Python/FastAPI/aiogram), БД, Docker — реализованы. Admin panel (`frontend/admin.html`) — запланирована.
+Frontend (`frontend/index.html`) — полностью реализован. Backend (Python/FastAPI/aiogram), БД, Docker — реализованы. Admin panel (`frontend/admin.html`) — реализована.
 
 ## Tech Stack
 
