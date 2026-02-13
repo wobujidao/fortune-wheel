@@ -53,15 +53,15 @@
 
   .wheel-outer {
     position: relative;
-    width: min(330px, 90vw);
-    height: min(330px, 90vw);
+    width: min(360px, 92vw);
+    height: min(360px, 92vw);
   }
 
   canvas#wheel {
     position: absolute;
-    top: 15px; left: 15px;
-    width: calc(100% - 30px);
-    height: calc(100% - 30px);
+    top: 30px; left: 30px;
+    width: calc(100% - 60px);
+    height: calc(100% - 60px);
     z-index: 2;
     border-radius: 50%;
   }
@@ -77,7 +77,7 @@
 
   .pointer-wrap {
     position: absolute;
-    top: -2px;
+    top: 13px;
     left: 50%;
     transform: translateX(-50%) rotate(180deg);
     z-index: 10;
@@ -285,7 +285,7 @@
   </div>
 
   <div class="wheel-outer">
-    <canvas id="lights" width="330" height="330"></canvas>
+    <canvas id="lights" width="360" height="360"></canvas>
     <canvas id="wheel" width="300" height="300"></canvas>
     <div class="pointer-wrap" id="pointer">
       <svg width="32" height="38" viewBox="0 0 32 38">
@@ -356,7 +356,7 @@ const W = 300, H = 300, R = W / 2;
 
 const lCanvas = document.getElementById('lights');
 const lCtx = lCanvas.getContext('2d');
-const LW = 330, LH = 330, LR = LW / 2;
+const LW = 360, LH = 360, LR = LW / 2;
 const numLights = 24;
 let lightPhase = 0;
 let lightAnimId = null;
@@ -446,21 +446,21 @@ function drawLights() {
   lCtx.clearRect(0, 0, LW, LH);
 
   lCtx.beginPath();
-  lCtx.arc(LR, LR, LR - 2, 0, Math.PI * 2);
+  lCtx.arc(LR, LR, LR - 17, 0, Math.PI * 2);
   lCtx.lineWidth = 26;
   lCtx.strokeStyle = '#c0392b';
   lCtx.stroke();
 
   lCtx.beginPath();
-  lCtx.arc(LR, LR, LR - 15, 0, Math.PI * 2);
+  lCtx.arc(LR, LR, LR - 30, 0, Math.PI * 2);
   lCtx.lineWidth = 2;
   lCtx.strokeStyle = '#d4a017';
   lCtx.stroke();
 
   for (let i = 0; i < numLights; i++) {
     const a = (i / numLights) * Math.PI * 2 - Math.PI / 2;
-    const x = LR + Math.cos(a) * (LR - 8);
-    const y = LR + Math.sin(a) * (LR - 8);
+    const x = LR + Math.cos(a) * (LR - 17);
+    const y = LR + Math.sin(a) * (LR - 17);
     const on = (i + lightPhase) % 3 !== 0;
 
     if (on) {
