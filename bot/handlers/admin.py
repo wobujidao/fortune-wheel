@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 from sqlalchemy import func, select
 
 from bot.config import WEBAPP_URL
@@ -39,10 +39,20 @@ async def cmd_admin(message: Message) -> None:
         await message.answer("⛔ У вас нет доступа к админке.")
         return
 
-    admin_url = f"{WEBAPP_URL}/admin"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔧 Открыть админку",
+                    web_app=WebAppInfo(url=f"{WEBAPP_URL}/admin"),
+                )
+            ]
+        ]
+    )
     await message.answer(
         "🔧 <b>Панель администратора</b>\n\n"
-        f"Откройте админку: {admin_url}",
+        "Нажмите кнопку ниже, чтобы открыть админку 👇",
+        reply_markup=keyboard,
         parse_mode="HTML",
     )
 
