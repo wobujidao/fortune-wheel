@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
-import random
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -139,7 +139,7 @@ async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
             raise HTTPException(status_code=503, detail="Нет доступных призов")
 
         # Случайный приз (равновероятно)
-        prize = random.choice(prizes)
+        prize = secrets.choice(prizes)
 
         # Сохраняем результат — unique constraint на tg_user_id защищает от race condition
         spin_record = Spin(
