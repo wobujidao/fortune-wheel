@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Колесо Фортуны — ЦБ МО</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    color: #fff;
+  }
+
+  .stars {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 16px 30px;
+    max-width: 420px;
+    width: 100%;
+  }
+
+  .header { text-align: center; margin-bottom: 4px; }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 3px;
+  }
+
+  .header p { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+  .wheel-outer {
+    position: relative;
+    width: 330px;
+    height: 330px;
+  }
+
+  canvas#wheel {
+    position: absolute;
+    top: 15px; left: 15px;
+    z-index: 2;
+    border-radius: 50%;
+  }
+
+  canvas#lights {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .pointer-wrap {
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+    z-index: 10;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+
+  .pointer-wrap svg {
+    display: block;
+  }
+
+  .pointer-wrap.bounce {
+    animation: pointerBounce 0.12s ease;
+  }
+
+  @keyframes pointerBounce {
+    0%, 100% { transform: translateX(-50%) rotate(180deg); }
+    50% { transform: translateX(-50%) rotate(186deg); }
+  }
+
+  .legend {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+  }
+
+  .legend-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .legend-text {
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.3;
+  }
+
+  .spin-btn {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    border: none;
+    color: #1a1a2e;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 14px 44px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(255, 170, 0, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .spin-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(255, 170, 0, 0.6);
+  }
+
+  .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .spin-btn .shimmer {
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer { 0% { left: -100%; } 100% { left: 100%; } }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.show {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: linear-gradient(135deg, #1e1e3a, #2a2a4a);
+    border-radius: 24px;
+    padding: 32px 24px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes modalPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal .prize-icon { font-size: 56px; margin-bottom: 12px; }
+
+  .modal h2 {
+    font-size: 22px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .modal .prize-text {
+    font-size: 16px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 20px;
+  }
+
+  .modal .close-btn {
+    background: linear-gradient(135deg, #ffd700, #ff8c00);
+    border: none;
+    color: #1a1a2e;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 12px 36px;
+    border-radius: 50px;
+    cursor: pointer;
+  }
+
+  .already-played {
+    text-align: center;
+    padding: 16px;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .already-played .prize-reminder {
+    background: rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 16px;
+    padding: 14px;
+    margin-top: 10px;
+    color: #ffd700;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .confetti-container {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 99;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    top: -20px;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<canvas class="stars" id="stars"></canvas>
+
+<div class="container">
+  <div class="header">
+    <h1>🎰 Колесо Фортуны</h1>
+    <p>ЦБ МО — 23 Февраля 2026</p>
+  </div>
+
+  <div class="wheel-outer">
+    <canvas id="lights" width="330" height="330"></canvas>
+    <canvas id="wheel" width="300" height="300"></canvas>
+    <div class="pointer-wrap" id="pointer">
+      <svg width="32" height="38" viewBox="0 0 32 38">
+        <defs>
+          <linearGradient id="gld" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fff7b0"/>
+            <stop offset="40%" stop-color="#ffd700"/>
+            <stop offset="100%" stop-color="#b8860b"/>
+          </linearGradient>
+        </defs>
+        <polygon points="16,0 32,28 24,28 24,38 8,38 8,28 0,28" fill="url(#gld)" stroke="#a07000" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div id="controls">
+    <button class="spin-btn" id="spinBtn" onclick="spin()">
+      <span class="shimmer"></span>
+      Испытай удачу!
+    </button>
+  </div>
+
+  <div id="alreadyPlayed" class="already-played" style="display:none;">
+    <p>Вы уже испытали удачу! 🎉</p>
+    <div class="prize-reminder" id="prizeReminder"></div>
+    <p style="margin-top:10px; font-size:12px;">Покажите результат руководителю<br>и воспользуйтесь подарком до 23.02.2026</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="prize-icon" id="modalIcon">🎉</div>
+    <h2>Поздравляем!</h2>
+    <p class="prize-text" id="modalText"></p>
+    <button class="close-btn" onclick="closeModal()">Отлично!</button>
+  </div>
+</div>
+
+<div class="confetti-container" id="confetti"></div>
+
+<script>
+const PRIZES = [
+  { text: "3-часовой перерыв на обед", color: "#4A90D9", icon: "🍽️" },
+  { text: "День отдыха в Ваш ДР", color: "#E8734A", icon: "🎂" },
+  { text: "Завершение работы на 2 часа раньше", color: "#F5C242", icon: "⏰" },
+  { text: "Дополнительный выходной", color: "#D95B5B", icon: "🌴" },
+  { text: "Начало работы на 2 часа позже", color: "#5BBD8C", icon: "😴" },
+  { text: "Завершение работы в обед (в 14:00)", color: "#9B6EC5", icon: "🏠" }
+];
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const W = 300, H = 300, R = W / 2;
+const segAngle = (2 * Math.PI) / PRIZES.length;
+
+const lCanvas = document.getElementById('lights');
+const lCtx = lCanvas.getContext('2d');
+const LW = 330, LH = 330, LR = LW / 2;
+const numLights = 24;
+let lightPhase = 0;
+
+// Start with sector 1 under pointer
+let currentAngle = -Math.PI / 2 - segAngle / 2;
+let spinning = false;
+let hasPlayed = false;
+let userResult = null;
+
+const legendEl = document.getElementById('legend');
+PRIZES.forEach((p, i) => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-num" style="background:${p.color}">${i+1}</div><div class="legend-text">${p.icon} ${p.text}</div>`;
+  legendEl.appendChild(item);
+});
+
+function drawLights() {
+  lCtx.clearRect(0, 0, LW, LH);
+
+  lCtx.beginPath();
+  lCtx.arc(LR, LR, LR - 2, 0, Math.PI * 2);
+  lCtx.lineWidth = 26;
+  lCtx.strokeStyle = '#c0392b';
+  lCtx.stroke();
+
+  lCtx.beginPath();
+  lCtx.arc(LR, LR, LR - 15, 0, Math.PI * 2);
+  lCtx.lineWidth = 2;
+  lCtx.strokeStyle = '#d4a017';
+  lCtx.stroke();
+
+  for (let i = 0; i < numLights; i++) {
+    const a = (i / numLights) * Math.PI * 2 - Math.PI / 2;
+    const x = LR + Math.cos(a) * (LR - 8);
+    const y = LR + Math.sin(a) * (LR - 8);
+    const on = (i + lightPhase) % 3 !== 0;
+
+    if (on) {
+      const grd = lCtx.createRadialGradient(x, y, 0, x, y, 10);
+      grd.addColorStop(0, 'rgba(255,255,200,0.6)');
+      grd.addColorStop(1, 'rgba(255,255,200,0)');
+      lCtx.beginPath();
+      lCtx.arc(x, y, 10, 0, Math.PI * 2);
+      lCtx.fillStyle = grd;
+      lCtx.fill();
+    }
+
+    lCtx.beginPath();
+    lCtx.arc(x, y, 5, 0, Math.PI * 2);
+    lCtx.fillStyle = on ? '#fffde0' : '#8b7355';
+    lCtx.fill();
+    lCtx.strokeStyle = '#a07000';
+    lCtx.lineWidth = 0.5;
+    lCtx.stroke();
+  }
+}
+
+function animateLights() {
+  drawLights();
+  requestAnimationFrame(animateLights);
+}
+
+setInterval(() => { lightPhase = (lightPhase + 1) % 3; }, 400);
+
+function drawWheel(angle) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(R, R);
+  ctx.rotate(angle);
+
+  for (let i = 0; i < PRIZES.length; i++) {
+    const startA = i * segAngle;
+    const endA = startA + segAngle;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, R, startA, endA);
+    ctx.closePath();
+    ctx.fillStyle = PRIZES[i].color;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(startA) * R, Math.sin(startA) * R);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.rotate(startA + segAngle / 2);
+
+    const badgeX = R * 0.6;
+    const badgeR = 17;
+
+    ctx.beginPath();
+    ctx.arc(badgeX, 0, badgeR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.93)';
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(badgeX, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = PRIZES[i].color;
+    ctx.font = 'bold 17px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(String(i + 1), 0, 0);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  const hubGrd = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
+  hubGrd.addColorStop(0, '#fff7b0');
+  hubGrd.addColorStop(0.5, '#ffd700');
+  hubGrd.addColorStop(1, '#b8860b');
+  ctx.beginPath();
+  ctx.arc(0, 0, 22, 0, Math.PI * 2);
+  ctx.fillStyle = hubGrd;
+  ctx.fill();
+  ctx.strokeStyle = '#a07000';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffe566';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function spin() {
+  if (spinning || hasPlayed) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+
+  const prizeIdx = Math.floor(Math.random() * PRIZES.length);
+  const segCenter = prizeIdx * segAngle + segAngle / 2;
+  const stopAngle = -Math.PI / 2 - segCenter;
+  const fullSpins = (6 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
+  let targetAngle = stopAngle - fullSpins;
+  while (targetAngle > currentAngle) targetAngle -= 2 * Math.PI;
+  while (targetAngle > currentAngle - 4 * Math.PI) targetAngle -= 2 * Math.PI;
+
+  const startAngle = currentAngle;
+  const totalDelta = targetAngle - startAngle;
+  const duration = 5000 + Math.random() * 1500;
+  const startTime = performance.now();
+  let lastSeg = -1;
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3.5);
+    currentAngle = startAngle + totalDelta * ease;
+    drawWheel(currentAngle);
+
+    const norm = ((currentAngle % (2 * Math.PI)) + 4 * Math.PI) % (2 * Math.PI);
+    const seg = Math.floor(norm / segAngle);
+    if (seg !== lastSeg) {
+      lastSeg = seg;
+      const ptr = document.getElementById('pointer');
+      ptr.classList.remove('bounce');
+      void ptr.offsetWidth;
+      ptr.classList.add('bounce');
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      hasPlayed = true;
+      userResult = PRIZES[prizeIdx];
+      showResult(prizeIdx);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showResult(idx) {
+  launchConfetti();
+  setTimeout(() => {
+    document.getElementById('modalIcon').textContent = PRIZES[idx].icon;
+    document.getElementById('modalText').textContent = 'Ваш подарок: ' + PRIZES[idx].text;
+    document.getElementById('modal').classList.add('show');
+  }, 400);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('alreadyPlayed').style.display = 'block';
+  document.getElementById('prizeReminder').textContent = '🎁 ' + userResult.text;
+}
+
+function launchConfetti() {
+  const c = document.getElementById('confetti');
+  const colors = ['#ffd700','#ff6b6b','#4ecdc4','#45b7d1','#f9ca24','#ff9ff3','#54a0ff'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random()*100+'%';
+    p.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+    p.style.animationDuration = (2+Math.random()*2)+'s';
+    p.style.animationDelay = Math.random()*0.5+'s';
+    p.style.borderRadius = Math.random()>0.5?'50%':'2px';
+    p.style.width = (6+Math.random()*8)+'px';
+    p.style.height = (6+Math.random()*8)+'px';
+    c.appendChild(p);
+  }
+  setTimeout(() => { c.innerHTML = ''; }, 4000);
+}
+
+function initStars() {
+  const c = document.getElementById('stars');
+  const cx = c.getContext('2d');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  const stars = [];
+  for (let i = 0; i < 150; i++) {
+    stars.push({ x: Math.random()*c.width, y: Math.random()*c.height, r: Math.random()*2.5+0.5, a: Math.random(), da: (Math.random()-0.5)*0.04 });
+  }
+  function draw() {
+    cx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.da;
+      if (s.a > 1 || s.a < 0.2) s.da *= -1;
+      cx.beginPath();
+      cx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      cx.fillStyle = `rgba(255,255,255,${s.a})`;
+      cx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+drawWheel(currentAngle);
+animateLights();
+initStars();
+
+window.addEventListener('resize', () => {
+  const c = document.getElementById('stars');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
