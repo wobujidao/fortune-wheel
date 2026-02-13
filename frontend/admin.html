@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка — Колесо Фортуны</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    color: #ffd700;
+    margin-bottom: 20px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 10px 18px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { background: rgba(255,255,255,0.12); }
+  .tab.active { background: #ffd700; color: #1a1a2e; font-weight: 700; border-color: #ffd700; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  th, td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  th { color: #ffd700; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn-gold { background: #ffd700; color: #1a1a2e; }
+  .btn-red { background: #e74c3c; color: #fff; }
+  .btn-green { background: #27ae60; color: #fff; }
+  .btn-small { padding: 5px 10px; font-size: 12px; }
+
+  .actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+
+  .stat-card {
+    background: rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .stat-card .num { font-size: 32px; font-weight: 700; color: #ffd700; }
+  .stat-card .label { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    display: none;
+  }
+
+  .msg.ok { background: rgba(39,174,96,0.2); color: #2ecc71; display: block; }
+  .msg.err { background: rgba(231,76,60,0.2); color: #e74c3c; display: block; }
+
+  .no-access {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255,255,255,0.5);
+    font-size: 16px;
+  }
+
+  @media (max-width: 600px) {
+    table { font-size: 11px; }
+    th, td { padding: 7px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none; max-width: 800px; margin: 0 auto;">
+  <h1>🔧 Панель администратора</h1>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('results')">Результаты</div>
+    <div class="tab" onclick="showTab('prizes')">Призы</div>
+    <div class="tab" onclick="showTab('users')">Доступ</div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <!-- ============ Результаты ============ -->
+  <div id="panel-results" class="panel active">
+    <div class="stat-card">
+      <div class="num" id="totalSpins">—</div>
+      <div class="label">всего вращений</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-gold" onclick="exportCSV()">📥 Экспорт CSV</button>
+      <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Telegram</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ============ Призы ============ -->
+  <div id="panel-prizes" class="panel">
+    <div class="actions">
+      <button class="btn btn-green" onclick="showAddPrize()">➕ Добавить приз</button>
+    </div>
+    <div id="addPrizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+      <div class="form-group"><label>Текст приза</label><input id="newPrizeText" placeholder="Дополнительный выходной"></div>
+      <div class="form-group"><label>Иконка (эмодзи)</label><input id="newPrizeIcon" placeholder="🌴" maxlength="4"></div>
+      <div class="form-group"><label>Цвет</label><input id="newPrizeColor" type="color" value="#4A90D9"></div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn btn-green" onclick="addPrize()">Сохранить</button>
+        <button class="btn btn-small" style="background:rgba(255,255,255,0.1);color:#ccc;" onclick="document.getElementById('addPrizeForm').style.display='none'">Отмена</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>№</th><th>Иконка</th><th>Приз</th><th>Цвет</th><th>Активен</th><th></th></tr>
+      </thead>
+      <tbody id="prizesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ============ Доступ ============ -->
+  <div id="panel-users" class="panel">
+    <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+      <div class="form-group"><label>Telegram ID</label><input id="newUserId" type="number" placeholder="123456789"></div>
+      <div class="form-group">
+        <label>Роль</label>
+        <select id="newUserRole"><option value="admin">Админ</option><option value="viewer">Просмотрщик</option></select>
+      </div>
+      <button class="btn btn-green" onclick="addUser()">Добавить</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Telegram ID</th><th>Роль</th><th>Добавил</th><th></th></tr>
+      </thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="noAccess" class="no-access" style="display:none;">
+  ⛔ Доступ запрещён.<br>Откройте эту страницу через Telegram Mini App.
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+let initData = '';
+
+if (tg) {
+  tg.ready();
+  initData = tg.initData || '';
+}
+
+function headers() {
+  return { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData };
+}
+
+function showMsg(text, ok) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+  setTimeout(() => { el.className = 'msg'; }, 3000);
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', t.textContent.trim() === { results: 'Результаты', prizes: 'Призы', users: 'Доступ' }[name]);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'results') loadResults();
+  if (name === 'prizes') loadPrizes();
+  if (name === 'users') loadUsers();
+}
+
+// ---- Результаты ----
+async function loadResults() {
+  try {
+    const res = await fetch('/api/admin/results', { headers: headers() });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    document.getElementById('totalSpins').textContent = data.length;
+    const tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = data.map(s => `<tr>
+      <td>${s.id}</td>
+      <td>@${s.tg_username || '—'}</td>
+      <td>${s.tg_first_name || ''} ${s.tg_last_name || ''}</td>
+      <td>${s.prize_text}</td>
+      <td>${s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''}</td>
+      <td><button class="btn btn-red btn-small" onclick="deleteResult(${s.id})">✕</button></td>
+    </tr>`).join('');
+  } catch (e) {
+    document.getElementById('noAccess').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+  }
+}
+
+async function deleteResult(id) {
+  if (!confirm('Удалить запись #' + id + '?')) return;
+  const res = await fetch('/api/admin/results/' + id, { method: 'DELETE', headers: headers() });
+  if (res.ok) { showMsg('Запись удалена', true); loadResults(); }
+  else showMsg('Ошибка удаления', false);
+}
+
+async function resetResults() {
+  if (!confirm('Сбросить ВСЕ результаты? Все пользователи смогут крутить заново.')) return;
+  const res = await fetch('/api/admin/reset', { method: 'POST', headers: headers() });
+  if (res.ok) { showMsg('Все результаты сброшены', true); loadResults(); }
+  else showMsg('Ошибка сброса', false);
+}
+
+function exportCSV() {
+  window.open('/api/admin/export?' + new URLSearchParams({ _tg: initData }), '_blank');
+}
+
+// ---- Призы ----
+async function loadPrizes() {
+  const res = await fetch('/api/admin/prizes', { headers: headers() });
+  if (!res.ok) return;
+  const data = await res.json();
+  const tbody = document.getElementById('prizesBody');
+  tbody.innerHTML = data.map(p => `<tr>
+    <td>${p.position}</td>
+    <td style="font-size:20px">${p.icon}</td>
+    <td>${p.text}</td>
+    <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${p.color}"></span> ${p.color}</td>
+    <td>${p.is_active ? '✅' : '❌'}</td>
+    <td><button class="btn btn-red btn-small" onclick="deletePrize(${p.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+function showAddPrize() {
+  document.getElementById('addPrizeForm').style.display = 'block';
+}
+
+async function addPrize() {
+  const text = document.getElementById('newPrizeText').value.trim();
+  const icon = document.getElementById('newPrizeIcon').value.trim();
+  const color = document.getElementById('newPrizeColor').value;
+  if (!text || !icon) { showMsg('Заполните текст и иконку', false); return; }
+
+  const res = await fetch('/api/admin/prizes', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ text, icon, color, position: 0 })
+  });
+  if (res.ok) {
+    showMsg('Приз добавлен', true);
+    document.getElementById('addPrizeForm').style.display = 'none';
+    document.getElementById('newPrizeText').value = '';
+    document.getElementById('newPrizeIcon').value = '';
+    loadPrizes();
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showMsg(err.detail || 'Ошибка', false);
+  }
+}
+
+async function deletePrize(id) {
+  if (!confirm('Удалить приз #' + id + '?')) return;
+  const res = await fetch('/api/admin/prizes/' + id, { method: 'DELETE', headers: headers() });
+  if (res.ok) { showMsg('Приз удалён', true); loadPrizes(); }
+  else {
+    const err = await res.json().catch(() => ({}));
+    showMsg(err.detail || 'Ошибка', false);
+  }
+}
+
+// ---- Пользователи ----
+async function loadUsers() {
+  const res = await fetch('/api/admin/users', { headers: headers() });
+  if (!res.ok) return;
+  const data = await res.json();
+  const tbody = document.getElementById('usersBody');
+  tbody.innerHTML = data.map(u => `<tr>
+    <td>${u.id}</td>
+    <td>${u.tg_user_id}</td>
+    <td>${u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик'}</td>
+    <td>${u.added_by || '—'}</td>
+    <td><button class="btn btn-red btn-small" onclick="deleteUser(${u.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+async function addUser() {
+  const tg_user_id = parseInt(document.getElementById('newUserId').value);
+  const role = document.getElementById('newUserRole').value;
+  if (!tg_user_id) { showMsg('Введите Telegram ID', false); return; }
+
+  const res = await fetch('/api/admin/users', {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ tg_user_id, role })
+  });
+  if (res.ok) {
+    showMsg('Пользователь добавлен', true);
+    document.getElementById('newUserId').value = '';
+    loadUsers();
+  } else {
+    const err = await res.json().catch(() => ({}));
+    showMsg(err.detail || 'Ошибка', false);
+  }
+}
+
+async function deleteUser(id) {
+  if (!confirm('Удалить пользователя?')) return;
+  const res = await fetch('/api/admin/users/' + id, { method: 'DELETE', headers: headers() });
+  if (res.ok) { showMsg('Удалено', true); loadUsers(); }
+  else showMsg('Ошибка', false);
+}
+
+// ---- Инициализация ----
+async function initAdmin() {
+  try {
+    const res = await fetch('/api/admin/results', { headers: headers() });
+    if (res.ok) {
+      document.getElementById('app').style.display = 'block';
+      loadResults();
+    } else {
+      document.getElementById('noAccess').style.display = 'block';
+    }
+  } catch (e) {
+    document.getElementById('noAccess').style.display = 'block';
+  }
+}
+
+initAdmin();
+</script>
+</body>
+</html>
