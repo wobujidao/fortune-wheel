@@ -10,7 +10,11 @@ from bot.db.models import Admin, AuditLog, Base, Prize  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
-engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH}", echo=False)
+engine = create_async_engine(
+    f"sqlite+aiosqlite:///{DB_PATH}",
+    echo=False,
+    connect_args={"timeout": 30},
+)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 DEFAULT_PRIZES = [
@@ -26,6 +30,8 @@ DEFAULT_PRIZES = [
 async def init_db() -> None:
     """Создаёт таблицы и сидирует начальные данные (призы + админы из .env)."""
     async with engine.begin() as conn:
+        await conn.execute(text("PRAGMA journal_mode=WAL"))
+        await conn.execute(text("PRAGMA busy_timeout=30000"))
         await conn.run_sync(Base.metadata.create_all)
 
         # Миграция: добавляем колонки к admins, если их нет
