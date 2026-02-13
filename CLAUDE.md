@@ -64,8 +64,8 @@ FastAPI + aiogram polling работают в одном процессе:
 
 ### Frontend
 
-- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо + лампочки). Telegram WebApp SDK для авторизации.
-- `frontend/admin.html` — админка с тремя вкладками: Результаты (поиск, удаление, CSV-экспорт через clipboard), Призы (CRUD), Доступ (управление ролями). Авторизация через `X-Telegram-Init-Data` заголовок.
+- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации. Поддерживает режим разработки (dev mode) через `localStorage`.
+- `frontend/admin.html` — админка с тремя вкладками: Результаты (поиск, удаление, CSV-экспорт через clipboard), Призы (CRUD), Доступ (управление ролями). Toggle «Режим разработки» для бесконечного тестирования колеса. Авторизация через `X-Telegram-Init-Data` заголовок.
 
 ### API (`bot/api/routes.py`)
 
@@ -94,11 +94,14 @@ SQLite, три таблицы: `prizes`, `spins`, `admins`. При первом 
 - **Кэширование**: Telegram WebView агрессивно кэширует — nginx отдаёт `Cache-Control: no-cache, no-store` на все ответы
 - **Memory leaks**: Canvas-анимации (колесо, звёзды) используют отслеживание RAF ID + cancelAnimationFrame при resize
 - **SQLite readonly**: Docker volume `data/` создаётся от root — `entrypoint.sh` делает `chown appuser` перед запуском через `gosu`
+- **Canvas лампочек**: размер canvas 360×360 (не 330!) — при меньшем размере красный обод с lineWidth 26 обрезается со всех сторон. Колесо 300×300 центрируется с offset 30px
+- **random vs secrets**: `random.choice()` (Mersenne Twister) в LXC-контейнере может давать одинаковые результаты при одновременных запросах — использовать `secrets.choice()` (OS CSPRNG)
+- **Режим разработки**: флаг `devMode` передаётся через `localStorage` между админкой и колесом (один origin). В dev mode колесо выбирает приз локально без API, не сохраняет результат, позволяет крутить бесконечно
 
 ## Key Conventions
 
 - "Колесо **Ф**ортуны" — заглавная Ф
-- Равная вероятность всех секторов
+- Равная вероятность всех секторов (`secrets.choice` — криптографический CSPRNG)
 - Поддержка 2–12 секторов
 - Полная типизация Python-кода
 - `.env` — никогда не коммитится; шаблон в `.env.example`
