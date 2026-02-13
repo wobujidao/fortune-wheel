@@ -115,6 +115,12 @@ SQLite, пять таблиц: `prizes`, `spins`, `admins`, `audit_log`, `settin
 - **SQLite WAL mode**: обязательно `PRAGMA journal_mode=WAL` при init_db() — позволяет читать во время записи. Без WAL при 300 одновременных запросах будут ошибки «database is locked»
 - **SQLite busy_timeout**: `connect_args={"timeout": 5}` в create_async_engine — при блокировке ждёт 5 сек вместо мгновенной ошибки
 - **Rate limiting по реальному IP**: nginx видит IP Nginx Proxy Manager (192.168.5.4), а не пользователя. Используем `map $http_x_real_ip` для получения реального IP из заголовка, иначе все 300 пользователей делят лимит 5 req/s
+- **Удаление админов**: нельзя удалить самого себя (`admin.tg_user_id == user["id"]`) и последнего администратора (`count(role=="admin") <= 1`). Без этих проверок система может стать неуправляемой
+- **Лимиты активных призов в update_prize**: `create_prize` проверяет max 12, но `update_prize` тоже должен — при активации проверяем `active_count >= 12`, при деактивации `active_count <= 2`. Без этого можно обойти лимиты через редактирование
+- **except Exception, не BaseException**: в `get_admin_users` и `create_admin_user` при вызове `bot.get_chat()` — ловить только `Exception`, не `BaseException`. Иначе перехватываются `CancelledError`/`SystemExit`, мешая graceful shutdown
+- **Команда /admin для viewer**: `cmd_admin` использует `_is_viewer()` (не `_is_admin()`), чтобы viewer тоже получал WebApp-кнопку для открытия админки. Ролевая модель фронтенда сама ограничивает доступные вкладки
+- **loadResults() обработка ошибок**: catch-блок показывает toast (`showMsg`) вместо скрытия `#app` — иначе сетевая ошибка при переключении вкладки убивает весь интерфейс. Проверка доступа (noAccess) выполняется только в `initAdmin()`
+- **CSS .admin-only и flex**: `body.role-admin .admin-only { display: revert }` перебивает `display: flex` у `.actions` из-за более высокой специфичности. Нужно отдельное правило `body.role-admin .actions.admin-only { display: flex }` (аналогично `.tab.admin-only { display: inline-flex }`)
 
 ## Key Conventions
 
