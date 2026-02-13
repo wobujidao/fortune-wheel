@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from bot.config import ADMIN_IDS, DB_PATH
@@ -27,6 +27,16 @@ async def init_db() -> None:
     """Создаёт таблицы и сидирует начальные данные (призы + админы из .env)."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Миграция: добавляем колонки к admins, если их нет
+        def _migrate_admins(sync_conn: object) -> None:
+            cols = [c["name"] for c in inspect(sync_conn).get_columns("admins")]
+            if "tg_username" not in cols:
+                sync_conn.execute(text("ALTER TABLE admins ADD COLUMN tg_username TEXT"))  # type: ignore[union-attr]
+            if "tg_first_name" not in cols:
+                sync_conn.execute(text("ALTER TABLE admins ADD COLUMN tg_first_name TEXT"))  # type: ignore[union-attr]
+
+        await conn.run_sync(_migrate_admins)
 
     async with async_session() as session:
         # Сидируем призы, если таблица пуста

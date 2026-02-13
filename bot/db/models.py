@@ -53,6 +53,8 @@ class Admin(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     tg_user_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    tg_username: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tg_first_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(Text, nullable=False, default="admin")
     added_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

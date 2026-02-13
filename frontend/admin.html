@@ -255,7 +255,7 @@
     </div>
     <table>
       <thead>
-        <tr><th>ID</th><th>Telegram ID</th><th>Роль</th><th>Добавил</th><th></th></tr>
+        <tr><th>ID</th><th>Telegram ID</th><th>Пользователь</th><th>Роль</th><th>Добавил</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
@@ -464,7 +464,10 @@ async function loadUsers() {
   tbody.innerHTML = '';
   data.forEach(u => {
     const tr = document.createElement('tr');
-    [u.id, u.tg_user_id, u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик', u.added_by || '—'].forEach(val => {
+    const userDisplay = u.tg_first_name
+      ? u.tg_first_name + (u.tg_username ? ' (@' + u.tg_username + ')' : '')
+      : (u.tg_username ? '@' + u.tg_username : '—');
+    [u.id, u.tg_user_id, userDisplay, u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик', u.added_by || '—'].forEach(val => {
       const td = document.createElement('td');
       td.textContent = val;
       tr.appendChild(td);

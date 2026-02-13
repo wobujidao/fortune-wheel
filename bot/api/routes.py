@@ -83,6 +83,8 @@ class AdminCreate(BaseModel):
 class AdminOut(BaseModel):
     id: int
     tg_user_id: int
+    tg_username: str | None = None
+    tg_first_name: str | None = None
     role: str
     added_by: int | None
     created_at: str
@@ -448,16 +450,32 @@ async def reorder_prizes(
 
 @admin_router.get("/users", response_model=list[AdminOut])
 async def get_admin_users(
+    request: Request,
     _user: dict[str, Any] = Depends(require_admin),
 ) -> list[AdminOut]:
     """Список админов и просмотрщиков."""
+    bot = request.app.state.bot
     async with async_session() as session:
         result = await session.execute(select(Admin).order_by(Admin.created_at))
         admins = result.scalars().all()
+
+        # Подтягиваем инфо из Telegram для записей без имени
+        for a in admins:
+            if a.tg_first_name is None:
+                try:
+                    chat = await bot.get_chat(a.tg_user_id)
+                    a.tg_username = chat.username
+                    a.tg_first_name = chat.first_name
+                except Exception:
+                    pass
+        await session.commit()
+
     return [
         AdminOut(
             id=a.id,
             tg_user_id=a.tg_user_id,
+            tg_username=a.tg_username,
+            tg_first_name=a.tg_first_name,
             role=a.role,
             added_by=a.added_by,
             created_at=a.created_at.isoformat() if a.created_at else "",
@@ -469,15 +487,29 @@ async def get_admin_users(
 @admin_router.post("/users", response_model=AdminOut)
 async def create_admin_user(
     data: AdminCreate,
+    request: Request,
     user: dict[str, Any] = Depends(require_admin),
 ) -> AdminOut:
     """Добавить админа / просмотрщика."""
     if data.role not in ("admin", "viewer"):
         raise HTTPException(status_code=400, detail="Роль должна быть admin или viewer")
 
+    # Пробуем получить информацию о пользователе из Telegram
+    tg_username: str | None = None
+    tg_first_name: str | None = None
+    try:
+        bot = request.app.state.bot
+        chat = await bot.get_chat(data.tg_user_id)
+        tg_username = chat.username
+        tg_first_name = chat.first_name
+    except Exception:
+        logger.debug("Не удалось получить инфо для Telegram ID %d", data.tg_user_id)
+
     async with async_session() as session:
         admin = Admin(
             tg_user_id=data.tg_user_id,
+            tg_username=tg_username,
+            tg_first_name=tg_first_name,
             role=data.role,
             added_by=user["id"],
         )
@@ -493,6 +525,8 @@ async def create_admin_user(
     return AdminOut(
         id=admin.id,
         tg_user_id=admin.tg_user_id,
+        tg_username=admin.tg_username,
+        tg_first_name=admin.tg_first_name,
         role=admin.role,
         added_by=admin.added_by,
         created_at=admin.created_at.isoformat() if admin.created_at else "",

@@ -34,6 +34,7 @@ app.include_router(admin_router)
 
 # ---- Aiogram ----
 bot = Bot(token=BOT_TOKEN)
+app.state.bot = bot
 dp = Dispatcher()
 dp.include_router(start_handlers.router)
 dp.include_router(admin_handlers.router)
