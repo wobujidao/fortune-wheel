@@ -173,6 +173,31 @@
     transform: translateX(20px);
   }
 
+  /* Drag & Drop */
+  tr[draggable="true"] { cursor: grab; }
+  tr[draggable="true"]:active { cursor: grabbing; }
+  tr.dragging { opacity: 0.4; }
+  tr.drag-over td { border-top: 2px solid #ffd700; }
+
+  /* Stats bars */
+  .stats-section { margin-bottom: 24px; }
+  .stats-section h3 { font-size: 14px; color: #ffd700; margin-bottom: 10px; }
+  .stat-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+  .stat-bar-label { width: 40%; min-width: 80px; color: rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat-bar-track { flex: 1; height: 20px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ffd700, #ff8c00); transition: width 0.4s ease; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 700; color: #1a1a2e; min-width: 24px; }
+  .stat-bar-fill.teal { background: linear-gradient(90deg, #2dd4bf, #0891b2); }
+
+  /* Audit log table */
+  .action-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.08);
+  }
+
   @media (max-width: 600px) {
     table { font-size: 11px; }
     th, td { padding: 7px 4px; }
@@ -188,6 +213,7 @@
     <div class="tab active" onclick="showTab('results')">Результаты</div>
     <div class="tab" onclick="showTab('prizes')">Призы</div>
     <div class="tab" onclick="showTab('users')">Доступ</div>
+    <div class="tab" onclick="showTab('audit')">Лог</div>
   </div>
 
   <div class="dev-toggle">
@@ -213,6 +239,7 @@
       <button class="btn btn-gold" onclick="exportCSV()">📥 Экспорт CSV</button>
       <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
     </div>
+    <div id="statsContainer"></div>
     <table>
       <thead>
         <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
@@ -248,6 +275,16 @@
         <tr><th>№</th><th>Иконка</th><th>Приз</th><th>Цвет</th><th>Активен</th><th></th></tr>
       </thead>
       <tbody id="prizesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ============ Лог ============ -->
+  <div id="panel-audit" class="panel">
+    <table>
+      <thead>
+        <tr><th>Дата</th><th>Админ</th><th>Действие</th><th>Детали</th></tr>
+      </thead>
+      <tbody id="auditBody"></tbody>
     </table>
   </div>
 
@@ -294,15 +331,17 @@ function showMsg(text, ok) {
   setTimeout(() => { el.className = 'msg'; }, 3000);
 }
 
+const TAB_NAMES = { results: 'Результаты', prizes: 'Призы', users: 'Доступ', audit: 'Лог' };
 function showTab(name) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', t.textContent.trim() === { results: 'Результаты', prizes: 'Призы', users: 'Доступ' }[name]);
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.trim() === TAB_NAMES[name]);
   });
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   if (name === 'results') loadResults();
   if (name === 'prizes') loadPrizes();
   if (name === 'users') loadUsers();
+  if (name === 'audit') loadAudit();
 }
 
 // ---- Результаты ----
@@ -316,6 +355,7 @@ async function loadResults() {
     document.getElementById('totalSpins').textContent = allResults.length;
     document.getElementById('searchResults').value = '';
     renderResults(allResults);
+    renderStats();
   } catch (e) {
     document.getElementById('noAccess').style.display = 'block';
     document.getElementById('app').style.display = 'none';
@@ -405,6 +445,7 @@ async function loadPrizes() {
   tbody.innerHTML = '';
   data.forEach(p => {
     const tr = document.createElement('tr');
+    tr.dataset.prizeId = p.id;
     const tdPos = document.createElement('td'); tdPos.textContent = p.position; tr.appendChild(tdPos);
     const tdIcon = document.createElement('td'); tdIcon.style.fontSize = '20px'; tdIcon.textContent = p.icon; tr.appendChild(tdIcon);
     const tdText = document.createElement('td'); tdText.textContent = p.text; tr.appendChild(tdText);
@@ -430,6 +471,7 @@ async function loadPrizes() {
     tr.appendChild(tdBtn);
     tbody.appendChild(tr);
   });
+  enablePrizeDragDrop();
 }
 
 function showAddPrize() {
@@ -559,6 +601,207 @@ async function deleteUser(id) {
   else showMsg('Ошибка', false);
 }
 
+// ---- Статистика ----
+function renderStats() {
+  const container = document.getElementById('statsContainer');
+  container.innerHTML = '';
+  if (!allResults.length) return;
+
+  // Распределение по призам
+  const prizeCounts = {};
+  allResults.forEach(s => { prizeCounts[s.prize_text] = (prizeCounts[s.prize_text] || 0) + 1; });
+  const prizeEntries = Object.entries(prizeCounts).sort((a, b) => b[1] - a[1]);
+  const maxPrize = prizeEntries[0][1];
+
+  const prizeSection = document.createElement('div');
+  prizeSection.className = 'stats-section';
+  const prizeH = document.createElement('h3');
+  prizeH.textContent = 'Распределение призов';
+  prizeSection.appendChild(prizeH);
+  prizeEntries.forEach(([name, count]) => {
+    const row = document.createElement('div');
+    row.className = 'stat-bar-row';
+    const label = document.createElement('div');
+    label.className = 'stat-bar-label';
+    label.textContent = name;
+    label.title = name;
+    const track = document.createElement('div');
+    track.className = 'stat-bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'stat-bar-fill';
+    fill.style.width = Math.round(count / maxPrize * 100) + '%';
+    fill.textContent = count;
+    track.appendChild(fill);
+    row.appendChild(label);
+    row.appendChild(track);
+    prizeSection.appendChild(row);
+  });
+  container.appendChild(prizeSection);
+
+  // Вращения по дням
+  const dayCounts = {};
+  allResults.forEach(s => {
+    if (!s.created_at) return;
+    const day = s.created_at.substring(0, 10);
+    dayCounts[day] = (dayCounts[day] || 0) + 1;
+  });
+  const dayEntries = Object.entries(dayCounts).sort((a, b) => a[0].localeCompare(b[0]));
+  if (dayEntries.length > 1) {
+    const maxDay = Math.max(...dayEntries.map(e => e[1]));
+    const daySection = document.createElement('div');
+    daySection.className = 'stats-section';
+    const dayH = document.createElement('h3');
+    dayH.textContent = 'Вращения по дням';
+    daySection.appendChild(dayH);
+    dayEntries.forEach(([day, count]) => {
+      const row = document.createElement('div');
+      row.className = 'stat-bar-row';
+      const label = document.createElement('div');
+      label.className = 'stat-bar-label';
+      label.textContent = new Date(day).toLocaleDateString('ru', { day: 'numeric', month: 'short' });
+      const track = document.createElement('div');
+      track.className = 'stat-bar-track';
+      const fill = document.createElement('div');
+      fill.className = 'stat-bar-fill teal';
+      fill.style.width = Math.round(count / maxDay * 100) + '%';
+      fill.textContent = count;
+      track.appendChild(fill);
+      row.appendChild(label);
+      row.appendChild(track);
+      daySection.appendChild(row);
+    });
+    container.appendChild(daySection);
+  }
+}
+
+// ---- Drag & Drop призов ----
+let dragSrcRow = null;
+
+function enablePrizeDragDrop() {
+  const tbody = document.getElementById('prizesBody');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.setAttribute('draggable', 'true');
+    tr.addEventListener('dragstart', handleDragStart);
+    tr.addEventListener('dragover', handleDragOver);
+    tr.addEventListener('dragenter', handleDragEnter);
+    tr.addEventListener('dragleave', handleDragLeave);
+    tr.addEventListener('drop', handleDrop);
+    tr.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+function handleDragStart(e) {
+  dragSrcRow = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  this.classList.add('drag-over');
+}
+
+function handleDragLeave() {
+  this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  if (dragSrcRow === this) return;
+  const tbody = this.parentNode;
+  const rows = Array.from(tbody.children);
+  const srcIdx = rows.indexOf(dragSrcRow);
+  const dstIdx = rows.indexOf(this);
+  if (srcIdx < dstIdx) {
+    tbody.insertBefore(dragSrcRow, this.nextSibling);
+  } else {
+    tbody.insertBefore(dragSrcRow, this);
+  }
+  this.classList.remove('drag-over');
+  savePrizeOrder();
+}
+
+function handleDragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('#prizesBody tr').forEach(tr => tr.classList.remove('drag-over'));
+}
+
+async function savePrizeOrder() {
+  const rows = document.querySelectorAll('#prizesBody tr');
+  const items = [];
+  rows.forEach((tr, i) => {
+    const id = parseInt(tr.dataset.prizeId);
+    if (id) items.push({ id, position: i });
+  });
+  if (!items.length) return;
+  try {
+    const res = await fetch('/api/admin/prizes/reorder', {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify(items)
+    });
+    if (res.ok) {
+      showMsg('Порядок сохранён', true);
+    } else {
+      showMsg('Ошибка сохранения порядка', false);
+      loadPrizes();
+    }
+  } catch {
+    showMsg('Ошибка сохранения порядка', false);
+    loadPrizes();
+  }
+}
+
+// ---- Аудит-лог ----
+const ACTION_LABELS = {
+  delete_spin: '🗑 Удаление вращения',
+  reset_all: '🔄 Сброс результатов',
+  create_prize: '➕ Добавление приза',
+  update_prize: '✏️ Редактирование приза',
+  delete_prize: '🗑 Удаление приза',
+  reorder_prizes: '↕️ Сортировка призов',
+  add_user: '👤 Добавление пользователя',
+  delete_user: '🗑 Удаление пользователя',
+};
+
+async function loadAudit() {
+  try {
+    const res = await fetch('/api/admin/audit', { headers: headers() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const tbody = document.getElementById('auditBody');
+    tbody.innerHTML = '';
+    data.forEach(log => {
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td');
+      tdDate.textContent = log.created_at ? new Date(log.created_at).toLocaleString('ru') : '';
+      tr.appendChild(tdDate);
+      const tdAdmin = document.createElement('td');
+      tdAdmin.textContent = log.admin_name || log.admin_id;
+      tr.appendChild(tdAdmin);
+      const tdAction = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'action-badge';
+      badge.textContent = ACTION_LABELS[log.action] || log.action;
+      tdAction.appendChild(badge);
+      tr.appendChild(tdAction);
+      const tdDetails = document.createElement('td');
+      tdDetails.textContent = log.details || '';
+      tdDetails.style.color = 'rgba(255,255,255,0.6)';
+      tdDetails.style.fontSize = '12px';
+      tr.appendChild(tdDetails);
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error('Ошибка загрузки аудит-лога:', e);
+  }
+}
+
 // ---- Режим разработки ----
 function toggleDevMode(on) {
   if (on) {
@@ -572,6 +815,12 @@ function toggleDevMode(on) {
 
 // ---- Инициализация ----
 async function initAdmin() {
+  // BackButton для закрытия админки
+  if (tg && tg.BackButton) {
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => tg.close());
+  }
+
   try {
     const res = await fetch('/api/admin/results', { headers: headers() });
     if (res.ok) {

@@ -6,7 +6,7 @@ from sqlalchemy import inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from bot.config import ADMIN_IDS, DB_PATH
-from bot.db.models import Admin, Base, Prize
+from bot.db.models import Admin, AuditLog, Base, Prize  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

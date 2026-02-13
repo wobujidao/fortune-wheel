@@ -282,9 +282,81 @@
     0% { transform: translateY(0) rotate(0deg); opacity: 1; }
     100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
   }
+
+  /* Loading spinner */
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+  .loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+  .loading-spinner {
+    width: 48px; height: 48px;
+    border: 4px solid rgba(255,215,0,0.2);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: spinLoader 0.8s linear infinite;
+  }
+  @keyframes spinLoader { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast-container {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(30,30,58,0.92);
+    border: 1px solid rgba(255,215,0,0.3);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    backdrop-filter: blur(8px);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+    pointer-events: auto;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.error { border-color: rgba(231,76,60,0.5); color: #ff6b6b; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* Sound toggle */
+  .sound-toggle {
+    position: fixed;
+    top: 12px; right: 12px;
+    z-index: 50;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
 </style>
 </head>
 <body>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+<div class="toast-container" id="toastContainer"></div>
+<button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔊</button>
 
 <canvas class="stars" id="stars"></canvas>
 
@@ -362,6 +434,77 @@ let hasPlayed = false;
 let userResult = null;
 const devMode = localStorage.getItem('devMode') === '1';
 
+// ---- Toast ----
+function showToast(text, type) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  t.textContent = text;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ---- HapticFeedback ----
+function haptic(method, arg) {
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback[method](arg); } catch {}
+}
+
+// ---- Sound (Web Audio API) ----
+let audioCtx = null;
+let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTick() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 1200;
+    gain.gain.value = 0.08;
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.06);
+  } catch {}
+}
+
+function playWin() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioCtx();
+    const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.12;
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15 * i + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + 0.15 * i);
+      osc.stop(ctx.currentTime + 0.15 * i + 0.3);
+    });
+  } catch {}
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
+  document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+  if (soundEnabled) playTick(); // демо при включении
+}
+
+// Инициализация иконки звука
+document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+
 // ---- Canvas ----
 const canvas = document.getElementById('wheel');
 const ctx = canvas.getContext('2d');
@@ -419,6 +562,7 @@ async function init() {
 
   if (devMode) {
     document.getElementById('devBanner').style.display = 'block';
+    hideLoading();
     return;
   }
 
@@ -438,6 +582,14 @@ async function init() {
       console.warn('Не удалось проверить статус пользователя');
     }
   }
+
+  hideLoading();
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('fade-out');
+  setTimeout(() => overlay.style.display = 'none', 400);
 }
 
 function buildLegend() {
@@ -581,6 +733,7 @@ function drawWheel(angle) {
 async function spin() {
   if (spinning || hasPlayed) return;
   spinning = true;
+  haptic('impactOccurred', 'medium');
   const btn = document.getElementById('spinBtn');
   btn.disabled = true;
 
@@ -611,6 +764,7 @@ async function spin() {
       }
     } catch (e) {
       console.error('Ошибка:', e);
+      showToast(e.message || 'Ошибка при вращении', 'error');
       spinning = false;
       btn.disabled = false;
       return;
@@ -647,6 +801,8 @@ async function spin() {
     const seg = Math.floor(norm / segAngle);
     if (seg !== lastSeg) {
       lastSeg = seg;
+      playTick();
+      haptic('impactOccurred', 'light');
       const ptr = document.getElementById('pointer');
       ptr.classList.remove('bounce');
       void ptr.offsetWidth;
@@ -658,6 +814,8 @@ async function spin() {
     } else {
       spinning = false;
       hasPlayed = true;
+      playWin();
+      haptic('notificationOccurred', 'success');
       showResult(prizeIdx);
     }
   }
@@ -672,11 +830,19 @@ function showResult(idx) {
     document.getElementById('modalIcon').textContent = icon;
     document.getElementById('modalText').textContent = 'Ваш подарок: ' + text;
     document.getElementById('modal').classList.add('show');
+    if (tg && tg.BackButton) {
+      tg.BackButton.show();
+      tg.BackButton.onClick(closeModal);
+    }
   }, 400);
 }
 
 function closeModal() {
   document.getElementById('modal').classList.remove('show');
+  if (tg && tg.BackButton) {
+    tg.BackButton.hide();
+    tg.BackButton.offClick(closeModal);
+  }
   if (devMode) {
     hasPlayed = false;
     document.getElementById('spinBtn').disabled = false;

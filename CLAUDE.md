@@ -64,19 +64,19 @@ FastAPI + aiogram polling работают в одном процессе:
 
 ### Frontend
 
-- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации. Поддерживает режим разработки (dev mode) через `localStorage`.
-- `frontend/admin.html` — админка с тремя вкладками: Результаты (поиск, удаление, CSV-экспорт через clipboard), Призы (CRUD с inline-формой редактирования), Доступ (управление ролями, имена подтягиваются через Telegram Bot API). Toggle «Режим разработки» для бесконечного тестирования колеса. Авторизация через `X-Telegram-Init-Data` заголовок.
+- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Поддерживает режим разработки (dev mode) через `localStorage`.
+- `frontend/admin.html` — админка с четырьмя вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика — графики распределения призов и вращений по дням), Призы (CRUD с inline-формой + drag & drop сортировка), Доступ (управление ролями, имена через Telegram Bot API), Лог (аудит-лог действий администраторов). Toggle «Режим разработки», BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
 
 ### API (`bot/api/routes.py`)
 
 - Public: `GET /api/prizes`, `POST /api/spin`, `GET /api/check/{tg_user_id}`
-- Admin: CRUD призов, результаты, CSV-экспорт, сброс, управление пользователями
+- Admin: CRUD призов, результаты, CSV-экспорт, сброс, управление пользователями, аудит-лог
 - Auth: `bot/api/auth.py` — HMAC-SHA256 валидация Telegram initData
-- Логирование: все админские операции логируются через `logger.info()`
+- Логирование: все админские операции логируются через `logger.info()` + записываются в таблицу `audit_log`
 
 ### Database (`bot/db/`)
 
-SQLite, три таблицы: `prizes`, `spins`, `admins`. При первом запуске `init_db()` создаёт таблицы и сидит 6 дефолтных призов + админов из `ADMIN_IDS`. Индекс на `spins.created_at`.
+SQLite, четыре таблицы: `prizes`, `spins`, `admins`, `audit_log`. При первом запуске `init_db()` создаёт таблицы и сидит 6 дефолтных призов + админов из `ADMIN_IDS`. Индексы на `spins.created_at` и `audit_log.created_at`.
 
 ### Bot commands (`bot/handlers/`)
 
@@ -97,6 +97,9 @@ SQLite, три таблицы: `prizes`, `spins`, `admins`. При первом 
 - **Canvas лампочек**: размер canvas 360×360 (не 330!) — при меньшем размере красный обод с lineWidth 26 обрезается со всех сторон. Колесо 300×300 центрируется с offset 30px
 - **random vs secrets**: `random.choice()` (Mersenne Twister) в LXC-контейнере может давать одинаковые результаты при одновременных запросах — использовать `secrets.choice()` (OS CSPRNG)
 - **Режим разработки**: флаг `devMode` передаётся через `localStorage` между админкой и колесом (один origin). В dev mode колесо выбирает приз локально без API, не сохраняет результат, позволяет крутить бесконечно
+- **Web Audio API**: AudioContext создаётся лениво (первый вызов playTick/playWin) — обход блокировки autoplay в iOS/Android. Состояние звука в `localStorage('soundEnabled')`
+- **HapticFeedback**: обязательна проверка `tg && tg.HapticFeedback` перед вызовом — на десктопе объект отсутствует
+- **Drag & Drop в таблице**: HTML5 DnD на `<tr>` — при drop нужно пересортировать DOM и отправить PUT `/api/admin/prizes/reorder`, при ошибке откатить через `loadPrizes()`
 
 ## Key Conventions
 

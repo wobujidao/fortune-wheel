@@ -14,9 +14,32 @@ from sqlalchemy.exc import IntegrityError
 
 from bot.api.auth import get_current_user, require_admin, require_viewer, validate_init_data
 from bot.db.database import async_session
-from bot.db.models import Admin, Prize, Spin
+from bot.db.models import Admin, AuditLog, Prize, Spin
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Хелперы
+# ---------------------------------------------------------------------------
+
+
+def _admin_display_name(user: dict[str, Any]) -> str:
+    """Человекочитаемое имя админа из initData user."""
+    name = ((user.get("first_name") or "") + " " + (user.get("last_name") or "")).strip()
+    return name or user.get("username") or str(user["id"])
+
+
+async def log_audit(
+    admin_id: int, admin_name: str | None, action: str, details: str | None = None,
+) -> None:
+    """Записать действие в аудит-лог."""
+    async with async_session() as session:
+        session.add(AuditLog(
+            admin_id=admin_id, admin_name=admin_name, action=action, details=details,
+        ))
+        await session.commit()
+
 
 # ---------------------------------------------------------------------------
 # Pydantic-схемы
@@ -87,6 +110,15 @@ class AdminOut(BaseModel):
     tg_first_name: str | None = None
     role: str
     added_by: int | None
+    created_at: str
+
+
+class AuditLogOut(BaseModel):
+    id: int
+    admin_id: int
+    admin_name: str | None
+    action: str
+    details: str | None
     created_at: str
 
 
@@ -233,8 +265,10 @@ async def delete_result(
             "Админ %d удалил вращение #%d (user=%d, prize=%s)",
             user["id"], spin_id, spin_record.tg_user_id, spin_record.prize_text,
         )
+        details = f"spin #{spin_id}, user={spin_record.tg_user_id}, prize={spin_record.prize_text}"
         await session.delete(spin_record)
         await session.commit()
+    await log_audit(user["id"], _admin_display_name(user), "delete_spin", details)
     return {"status": "ok"}
 
 
@@ -249,6 +283,7 @@ async def reset_results(
         await session.execute(delete(Spin))
         await session.commit()
     logger.info("Админ %d сбросил все результаты (%d записей)", user["id"], count)
+    await log_audit(user["id"], _admin_display_name(user), "reset_all", f"{count} записей")
     return {"status": "ok", "message": "Все результаты сброшены"}
 
 
@@ -311,6 +346,32 @@ async def export_results(
     )
 
 
+# ---- Аудит-лог ----
+
+
+@admin_router.get("/audit", response_model=list[AuditLogOut])
+async def get_audit_log(
+    _user: dict[str, Any] = Depends(require_admin),
+) -> list[AuditLogOut]:
+    """Лог действий администраторов."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(AuditLog).order_by(AuditLog.created_at.desc()).limit(500)
+        )
+        logs = result.scalars().all()
+    return [
+        AuditLogOut(
+            id=log.id,
+            admin_id=log.admin_id,
+            admin_name=log.admin_name,
+            action=log.action,
+            details=log.details,
+            created_at=log.created_at.isoformat() if log.created_at else "",
+        )
+        for log in logs
+    ]
+
+
 # ---- Управление призами ----
 
 
@@ -363,6 +424,7 @@ async def create_prize(
         await session.refresh(prize)
 
     logger.info("Админ %d добавил приз: %s", user["id"], data.text)
+    await log_audit(user["id"], _admin_display_name(user), "create_prize", f"{data.icon} {data.text}")
     return PrizeOut(
         id=prize.id,
         text=prize.text,
@@ -391,6 +453,7 @@ async def update_prize(
         await session.refresh(prize)
 
     logger.info("Админ %d обновил приз #%d", user["id"], prize_id)
+    await log_audit(user["id"], _admin_display_name(user), "update_prize", f"#{prize_id}: {prize.text}")
     return PrizeOut(
         id=prize.id,
         text=prize.text,
@@ -424,16 +487,18 @@ async def delete_prize(
                 status_code=400, detail="Минимум 2 активных сектора"
             )
 
-        logger.info("Админ %d удалил приз #%d (%s)", user["id"], prize_id, prize.text)
+        prize_text = prize.text
+        logger.info("Админ %d удалил приз #%d (%s)", user["id"], prize_id, prize_text)
         await session.delete(prize)
         await session.commit()
+    await log_audit(user["id"], _admin_display_name(user), "delete_prize", f"#{prize_id}: {prize_text}")
     return {"status": "ok"}
 
 
 @admin_router.put("/prizes/reorder")
 async def reorder_prizes(
     items: list[ReorderItem],
-    _user: dict[str, Any] = Depends(require_admin),
+    user: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     """Изменить порядок секторов."""
     async with async_session() as session:
@@ -442,6 +507,8 @@ async def reorder_prizes(
                 update(Prize).where(Prize.id == item.id).values(position=item.position)
             )
         await session.commit()
+    logger.info("Админ %d изменил порядок призов (%d шт.)", user["id"], len(items))
+    await log_audit(user["id"], _admin_display_name(user), "reorder_prizes", f"{len(items)} призов")
     return {"status": "ok"}
 
 
@@ -522,6 +589,7 @@ async def create_admin_user(
         await session.refresh(admin)
 
     logger.info("Админ %d добавил пользователя %d (роль=%s)", user["id"], data.tg_user_id, data.role)
+    await log_audit(user["id"], _admin_display_name(user), "add_user", f"tg_id={data.tg_user_id}, role={data.role}")
     return AdminOut(
         id=admin.id,
         tg_user_id=admin.tg_user_id,
@@ -543,7 +611,9 @@ async def delete_admin_user(
         admin = await session.get(Admin, admin_id)
         if admin is None:
             raise HTTPException(status_code=404, detail="Запись не найдена")
+        admin_info = f"tg_id={admin.tg_user_id}, role={admin.role}"
         logger.info("Админ %d удалил пользователя %d (роль=%s)", user["id"], admin.tg_user_id, admin.role)
         await session.delete(admin)
         await session.commit()
+    await log_audit(user["id"], _admin_display_name(user), "delete_user", admin_info)
     return {"status": "ok"}
