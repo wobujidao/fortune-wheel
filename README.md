@@ -217,6 +217,7 @@ fortune-wheel/
 │   └── admin.html              # Веб-админка
 │
 ├── bot/
+│   ├── __init__.py
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── main.py                 # Точка входа: бот + FastAPI
@@ -244,7 +245,7 @@ fortune-wheel/
 | Контейнер | Описание | Порт |
 |-----------|----------|------|
 | `bot` | Python: aiogram 3 + FastAPI | 8000 (внутренний) |
-| `nginx` | Reverse proxy + SSL + статика | 80, 443 |
+| `nginx` | Reverse proxy + статика | 8000 → 80 (SSL на Nginx Proxy Manager) |
 
 ### Схема БД (SQLite)
 

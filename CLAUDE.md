@@ -9,76 +9,82 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Telegram Mini App "Wheel of Fortune" (Колесо Фортуны) for employees of ЦБ МО. Users spin a wheel via a Telegram bot and win a guaranteed workplace perk (e.g., extra day off, late start). One spin per user, prizes valid until next Feb 23. The project is designed for annual reuse with full admin control over prizes and results.
+Telegram Mini App "Колесо Фортуны" для сотрудников ЦБ МО. Пользователи крутят колесо через Telegram-бот и выигрывают гарантированный бонус к рабочему графику. Одна попытка на пользователя до сброса через админку. Проект рассчитан на ежегодное переиспользование.
 
 - Bot: [@fortune_cbmo_bot](https://t.me/fortune_cbmo_bot)
 - Domain: fortune.demidov.info
-- Language: Russian (all UI text, README, comments)
-
-## Current State
-
-Frontend (`frontend/index.html`) — полностью реализован. Backend (Python/FastAPI/aiogram), БД, Docker — реализованы. Admin panel (`frontend/admin.html`) — реализована.
+- Язык UI и комментариев: русский
 
 ## Tech Stack
 
-| Layer | Technology | Status |
-|-------|-----------|--------|
-| Frontend | Vanilla HTML5 + CSS3 + JS (Canvas API) | Implemented |
-| Backend | Python 3.13+, FastAPI, Pydantic v2 | Implemented |
-| Bot | aiogram 3.x | Implemented |
-| Database | SQLite + aiosqlite + SQLAlchemy 2.0 async | Implemented |
-| Auth | Telegram WebApp initData (HMAC-SHA256) | Implemented |
-| Linter | Ruff (Python) | Planned |
-| Deploy | Docker + Docker Compose, Nginx reverse proxy | Implemented |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vanilla HTML5 + CSS3 + JS (Canvas API), Telegram WebApp SDK |
+| Backend | Python 3.13, FastAPI 0.115, Pydantic v2 (<2.10) |
+| Bot | aiogram 3.15 |
+| Database | SQLite + aiosqlite + SQLAlchemy 2.0 async |
+| Auth | Telegram WebApp initData (HMAC-SHA256) |
+| Deploy | Docker Compose (2 контейнера: bot + nginx) |
 
 ## Build & Run
 
-No build step needed for the frontend — it's a single HTML file. Open `frontend/index.html` in a browser.
-
-When the backend is implemented:
 ```bash
-cp .env.example .env   # configure BOT_TOKEN, ADMIN_IDS
+cp .env.example .env   # заполнить BOT_TOKEN, ADMIN_IDS
 docker compose up -d --build
 ```
 
+Фронтенд не требует сборки — монтируется как Docker volume (изменения в `frontend/` применяются без пересборки).
+
 ## Architecture
 
-### Frontend (`frontend/index.html`)
+### Единый процесс (`bot/main.py`)
 
-Single-file Telegram Mini App with no dependencies or bundler:
+FastAPI + aiogram polling работают в одном процессе:
+- FastAPI обслуживает API на порту 8000
+- aiogram polling запускается через `asyncio.create_task(dp.start_polling(bot))` в `on_startup`
 
-- **PRIZES array** (line ~324): Hardcoded 6 prizes with text, color, icon. Will become dynamic via `GET /api/prizes` when backend exists.
-- **Canvas rendering**: Two overlapping canvases — one for the wheel (`drawWheel(angle)`), one for animated border lights (`drawLights()` + `animateLights()`).
-- **Spin mechanics** (`spin()`): Random prize selection, 6-8 full rotations over 5-6.5s with cubic-bezier easing, pointer bounce on segment crossings.
-- **State**: `currentAngle`, `spinning` (lock), `hasPlayed` (one-spin enforcement, client-side only), `userResult`.
-- **Visual effects**: Background stars (150 elements, breathing opacity), confetti (60 pieces on win), light bulb animation (400ms cycle).
+**Важно**: `uvicorn.run(app, ...)` — передавать объект `app`, НЕ строку `"bot.main:app"`. Строковый импорт вызывает повторную регистрацию роутеров aiogram.
 
-### Planned Backend (`bot/`)
+### Docker-архитектура
 
-Described in README.md — Python app combining aiogram bot + FastAPI in one process:
+- `bot` (fortune-bot) — Python: aiogram + FastAPI, expose 8000 (внутренний)
+- `nginx` (fortune-nginx) — reverse proxy, порт 8000:80, раздаёт `frontend/` как статику
+- Внешний Nginx Proxy Manager (192.168.5.4) проксирует на 192.168.5.11:8000
 
-- `bot/main.py` — entry point running both bot and API
-- `bot/api/routes.py` — public endpoints (`/api/prizes`, `/api/spin`, `/api/check/{tg_user_id}`) and admin endpoints
-- `bot/api/auth.py` — Telegram initData HMAC-SHA256 validation
-- `bot/db/models.py` — SQLAlchemy models: `prizes`, `spins`, `admins`
-- `bot/handlers/` — Telegram command handlers (`/start`, `/admin`, `/results`)
+### Frontend
 
-### Database Schema
+- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо + лампочки). Telegram WebApp SDK для авторизации.
+- `frontend/admin.html` — админка с тремя вкладками: Результаты (поиск, удаление, CSV-экспорт), Призы (CRUD), Доступ (управление ролями). Авторизация через `X-Telegram-Init-Data` заголовок.
 
-Three tables: `prizes` (configurable sectors), `spins` (one per user, stores Telegram identity + prize), `admins` (role-based: admin/viewer). See README.md for full ER diagram.
-
-### API Design
+### API (`bot/api/routes.py`)
 
 - Public: `GET /api/prizes`, `POST /api/spin`, `GET /api/check/{tg_user_id}`
-- Admin: CRUD for prizes, results management, CSV export, user role management, full reset
-- All requests validated via Telegram WebApp initData
+- Admin: CRUD призов, результаты, CSV-экспорт, сброс, управление пользователями
+- Auth: `bot/api/auth.py` — HMAC-SHA256 валидация Telegram initData
+
+### Database (`bot/db/`)
+
+SQLite, три таблицы: `prizes`, `spins`, `admins`. При первом запуске `init_db()` создаёт таблицы и сидит 6 дефолтных призов + админов из `ADMIN_IDS`.
+
+### Bot commands (`bot/handlers/`)
+
+- `/start` — кнопка WebApp для открытия Mini App
+- `/admin` — кнопка WebApp для открытия админки (только для роли admin)
+- `/results` — сводка количества вращений (admin + viewer)
+
+## Known Gotchas
+
+- **pydantic**: aiogram 3.15 требует `pydantic<2.10`
+- **greenlet**: обязательна для SQLAlchemy async (`greenlet>=3.0.0` в requirements)
+- **Время**: SQLite `func.now()` всегда возвращает UTC. Используем `default=datetime.now` на уровне Python + `TZ=Europe/Moscow` в docker-compose
+- **CSV-экспорт**: `window.open()` не отправляет заголовки — используем `fetch()` + blob download
+- **Админка**: открывается только через WebApp-кнопку в Telegram (нужен initData для авторизации)
 
 ## Key Conventions
 
-- "Колесо **Ф**ортуны" — capital Ф in Фортуны
-- Equal probability across all wheel sectors
-- Support 2-12 sectors (admin-configurable)
-- Full type annotations required for Python code
-- Ruff for Python linting
-- Environment config via `.env` (never committed); template in `.env.example`
-- Data directory (`data/`) and database files excluded from git
+- "Колесо **Ф**ортуны" — заглавная Ф
+- Равная вероятность всех секторов
+- Поддержка 2–12 секторов
+- Полная типизация Python-кода
+- `.env` — никогда не коммитится; шаблон в `.env.example`
+- `data/` — исключена из git
