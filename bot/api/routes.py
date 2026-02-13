@@ -521,6 +521,20 @@ async def update_prize(
         if prize is None:
             raise HTTPException(status_code=404, detail="Приз не найден")
         update_data = data.model_dump(exclude_unset=True)
+
+        # Проверяем лимиты при изменении is_active
+        if "is_active" in update_data:
+            count_result = await session.execute(
+                select(func.count(Prize.id)).where(Prize.is_active == True)  # noqa: E712
+            )
+            active_count = count_result.scalar() or 0
+            if update_data["is_active"] and not prize.is_active:
+                if active_count >= 12:
+                    raise HTTPException(status_code=400, detail="Максимум 12 активных секторов")
+            if not update_data["is_active"] and prize.is_active:
+                if active_count <= 2:
+                    raise HTTPException(status_code=400, detail="Минимум 2 активных сектора")
+
         for field, value in update_data.items():
             setattr(prize, field, value)
         await session.commit()
@@ -590,7 +604,7 @@ async def get_admin_users(
                     chat = await bot.get_chat(a.tg_user_id)
                     a.tg_username = chat.username
                     a.tg_first_name = chat.first_name or "—"
-                except (Exception, BaseException) as exc:
+                except Exception as exc:
                     logger.debug("Не удалось получить инфо для %d: %s", a.tg_user_id, exc)
         await session.commit()
 
@@ -626,7 +640,7 @@ async def create_admin_user(
         chat = await bot.get_chat(data.tg_user_id)
         tg_username = chat.username
         tg_first_name = chat.first_name
-    except (Exception, BaseException) as exc:
+    except Exception as exc:
         logger.debug("Не удалось получить инфо для Telegram ID %d: %s", data.tg_user_id, exc)
 
     async with async_session() as session:
@@ -668,6 +682,14 @@ async def delete_admin_user(
         admin = await session.get(Admin, admin_id)
         if admin is None:
             raise HTTPException(status_code=404, detail="Запись не найдена")
+        if admin.tg_user_id == user["id"]:
+            raise HTTPException(status_code=400, detail="Нельзя удалить самого себя")
+        if admin.role == "admin":
+            count_result = await session.execute(
+                select(func.count(Admin.id)).where(Admin.role == "admin")
+            )
+            if (count_result.scalar() or 0) <= 1:
+                raise HTTPException(status_code=400, detail="Нельзя удалить последнего администратора")
         admin_info = f"tg_id={admin.tg_user_id}, role={admin.role}"
         logger.info("Админ %d удалил пользователя %d (роль=%s)", user["id"], admin.tg_user_id, admin.role)
         await session.delete(admin)

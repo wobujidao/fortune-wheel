@@ -35,7 +35,7 @@ async def cmd_admin(message: Message) -> None:
     """Ссылка на веб-админку (только для админов)."""
     if not message.from_user:
         return
-    if not await _is_admin(message.from_user.id):
+    if not await _is_viewer(message.from_user.id):
         await message.answer("⛔ У вас нет доступа к админке.")
         return
 

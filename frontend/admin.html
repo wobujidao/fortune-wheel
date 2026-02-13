@@ -375,6 +375,7 @@
   body.role-admin .admin-only { display: revert; }
   /* Tabs: flex items need flex display */
   body.role-admin .tab.admin-only { display: inline-flex; }
+  body.role-admin .actions.admin-only { display: flex; }
 </style>
 </head>
 <body>
@@ -638,8 +639,8 @@ async function loadResults() {
     renderStats();
     hideLoading('Results');
   } catch (e) {
-    document.getElementById('noAccess').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
+    showMsg('Ошибка загрузки результатов', false);
+    hideLoading('Results');
   }
 }
 
