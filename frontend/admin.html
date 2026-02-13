@@ -146,6 +146,9 @@
       <div class="num" id="totalSpins">—</div>
       <div class="label">всего вращений</div>
     </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <input id="searchResults" type="text" placeholder="🔍 Поиск по имени, username или Telegram ID..." oninput="filterResults()">
+    </div>
     <div class="actions">
       <button class="btn btn-gold" onclick="exportCSV()">📥 Экспорт CSV</button>
       <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
@@ -235,25 +238,44 @@ function showTab(name) {
 }
 
 // ---- Результаты ----
+let allResults = [];
+
 async function loadResults() {
   try {
     const res = await fetch('/api/admin/results', { headers: headers() });
     if (!res.ok) throw new Error(res.status);
-    const data = await res.json();
-    document.getElementById('totalSpins').textContent = data.length;
-    const tbody = document.getElementById('resultsBody');
-    tbody.innerHTML = data.map(s => `<tr>
-      <td>${s.id}</td>
-      <td>@${s.tg_username || '—'}</td>
-      <td>${s.tg_first_name || ''} ${s.tg_last_name || ''}</td>
-      <td>${s.prize_text}</td>
-      <td>${s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''}</td>
-      <td><button class="btn btn-red btn-small" onclick="deleteResult(${s.id})">✕</button></td>
-    </tr>`).join('');
+    allResults = await res.json();
+    document.getElementById('totalSpins').textContent = allResults.length;
+    document.getElementById('searchResults').value = '';
+    renderResults(allResults);
   } catch (e) {
     document.getElementById('noAccess').style.display = 'block';
     document.getElementById('app').style.display = 'none';
   }
+}
+
+function filterResults() {
+  const q = document.getElementById('searchResults').value.toLowerCase().trim();
+  if (!q) { renderResults(allResults); return; }
+  const filtered = allResults.filter(s =>
+    (s.tg_username || '').toLowerCase().includes(q) ||
+    (s.tg_first_name || '').toLowerCase().includes(q) ||
+    (s.tg_last_name || '').toLowerCase().includes(q) ||
+    String(s.tg_user_id).includes(q)
+  );
+  renderResults(filtered);
+}
+
+function renderResults(data) {
+  const tbody = document.getElementById('resultsBody');
+  tbody.innerHTML = data.map(s => `<tr>
+    <td>${s.id}</td>
+    <td>@${s.tg_username || '—'}</td>
+    <td>${s.tg_first_name || ''} ${s.tg_last_name || ''}</td>
+    <td>${s.prize_text}</td>
+    <td>${s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''}</td>
+    <td><button class="btn btn-red btn-small" onclick="deleteResult(${s.id})">✕</button></td>
+  </tr>`).join('');
 }
 
 async function deleteResult(id) {
