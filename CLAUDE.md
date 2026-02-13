@@ -64,7 +64,7 @@ FastAPI + aiogram polling работают в одном процессе:
 
 ### Frontend
 
-- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Два стиля указателя: top (стрелка сверху) и center (стрелка из хаба вверх) — переключается в админке. Поддерживает режим разработки (dev mode) через `localStorage`.
+- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360), внутренняя разметка процентная для масштабирования. Размер колеса адаптируется под высоту экрана через `min(320px, 80vw, 42dvh)`. Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Два стиля указателя: top (стрелка сверху) и center (стрелка из хаба вверх) — переключается в админке. Поддерживает режим разработки (dev mode) через `localStorage`.
 - `frontend/admin.html` — админка с пятью вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика), Призы (CRUD + drag & drop сортировка), Доступ (управление ролями), Настройки (стиль указателя колеса), Лог (аудит-лог). Toggle «Режим разработки», BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
 
 ### API (`bot/api/routes.py`)
@@ -94,7 +94,8 @@ SQLite, пять таблиц: `prizes`, `spins`, `admins`, `audit_log`, `settin
 - **Кэширование**: Telegram WebView агрессивно кэширует — nginx отдаёт `Cache-Control: no-cache, no-store` на все ответы
 - **Memory leaks**: Canvas-анимации (колесо, звёзды) используют отслеживание RAF ID + cancelAnimationFrame при resize
 - **SQLite readonly**: Docker volume `data/` создаётся от root — `entrypoint.sh` делает `chown appuser` перед запуском через `gosu`
-- **Canvas лампочек**: размер canvas 360×360 (не 330!) — при меньшем размере красный обод с lineWidth 26 обрезается со всех сторон. Колесо 300×300 центрируется с offset 30px
+- **Canvas лампочек**: размер canvas 360×360 (не 330!) — при меньшем размере красный обод с lineWidth 26 обрезается со всех сторон. Колесо 300×300 внутри — позиционирование через проценты (8.33% offset, 83.33% size), стрелки-указатели тоже процентные (width 8.9% / 12.2%) для корректного масштабирования при разных размерах wheel-outer
+- **Mobile-first layout**: весь контент (заголовок + колесо + легенда + кнопка) должен помещаться без скролла в Telegram WebApp. Колесо адаптируется через `min(320px, 80vw, 42dvh)` с fallback на `vh`. Легенда компактная: gap 2px, padding 4px 10px, номера 20×20
 - **random vs secrets**: `random.choice()` (Mersenne Twister) в LXC-контейнере может давать одинаковые результаты при одновременных запросах — использовать `secrets.choice()` (OS CSPRNG)
 - **Режим разработки**: флаг `devMode` передаётся через `localStorage` между админкой и колесом (один origin). В dev mode колесо выбирает приз локально без API, не сохраняет результат, позволяет крутить бесконечно
 - **Web Audio API**: AudioContext создаётся лениво (первый вызов playTick/playWin) — обход блокировки autoplay в iOS/Android. Состояние звука в `localStorage('soundEnabled')`
