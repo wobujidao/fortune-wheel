@@ -235,6 +235,16 @@
     min-height: 48px;
   }
 
+  .dev-banner {
+    background: rgba(39,174,96,0.2);
+    border: 1px solid rgba(39,174,96,0.4);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #2ecc71;
+    text-align: center;
+  }
+
   .already-played {
     text-align: center;
     padding: 16px;
@@ -283,6 +293,8 @@
     <h1>Колесо Фортуны</h1>
     <p>ЦБ МО — 23 Февраля</p>
   </div>
+
+  <div class="dev-banner" id="devBanner" style="display:none;">🛠 Режим разработки — результаты не сохраняются</div>
 
   <div class="wheel-outer">
     <canvas id="lights" width="360" height="360"></canvas>
@@ -348,6 +360,7 @@ let currentAngle = 0;
 let spinning = false;
 let hasPlayed = false;
 let userResult = null;
+const devMode = localStorage.getItem('devMode') === '1';
 
 // ---- Canvas ----
 const canvas = document.getElementById('wheel');
@@ -403,6 +416,11 @@ async function init() {
   drawWheel(currentAngle);
   animateLights();
   initStars();
+
+  if (devMode) {
+    document.getElementById('devBanner').style.display = 'block';
+    return;
+  }
 
   // Проверяем, крутил ли пользователь
   if (tgUser && tgUser.id > 0) {
@@ -566,35 +584,43 @@ async function spin() {
   const btn = document.getElementById('spinBtn');
   btn.disabled = true;
 
-  // Запрашиваем приз у сервера
-  let serverPrize = null;
-  try {
-    const res = await fetch('/api/spin', { method: 'POST', headers: apiHeaders() });
-    if (res.ok) {
-      serverPrize = await res.json();
-    } else {
-      const err = await res.json().catch(() => ({}));
-      if (res.status === 409) {
-        hasPlayed = true;
-        spinning = false;
-        document.getElementById('controls').style.display = 'none';
-        document.getElementById('alreadyPlayed').style.display = 'block';
-        document.getElementById('prizeReminder').textContent = '🎁 Вы уже испытали удачу!';
-        return;
-      }
-      throw new Error(err.detail || 'Ошибка сервера');
-    }
-  } catch (e) {
-    console.error('Ошибка:', e);
-    spinning = false;
-    btn.disabled = false;
-    return;
-  }
+  let prizeIdx;
 
-  // Определяем индекс приза на колесе
-  let prizeIdx = PRIZES.findIndex(p => p.id === serverPrize.prize_id);
-  if (prizeIdx === -1) prizeIdx = 0;
-  userResult = { text: serverPrize.prize_text, icon: serverPrize.prize_icon, color: serverPrize.prize_color };
+  if (devMode) {
+    // Dev mode: случайный приз локально, без API
+    prizeIdx = Math.floor(Math.random() * PRIZES.length);
+    userResult = { text: PRIZES[prizeIdx].text, icon: PRIZES[prizeIdx].icon, color: PRIZES[prizeIdx].color };
+  } else {
+    // Запрашиваем приз у сервера
+    let serverPrize = null;
+    try {
+      const res = await fetch('/api/spin', { method: 'POST', headers: apiHeaders() });
+      if (res.ok) {
+        serverPrize = await res.json();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          hasPlayed = true;
+          spinning = false;
+          document.getElementById('controls').style.display = 'none';
+          document.getElementById('alreadyPlayed').style.display = 'block';
+          document.getElementById('prizeReminder').textContent = '🎁 Вы уже испытали удачу!';
+          return;
+        }
+        throw new Error(err.detail || 'Ошибка сервера');
+      }
+    } catch (e) {
+      console.error('Ошибка:', e);
+      spinning = false;
+      btn.disabled = false;
+      return;
+    }
+
+    // Определяем индекс приза на колесе
+    prizeIdx = PRIZES.findIndex(p => p.id === serverPrize.prize_id);
+    if (prizeIdx === -1) prizeIdx = 0;
+    userResult = { text: serverPrize.prize_text, icon: serverPrize.prize_icon, color: serverPrize.prize_color };
+  }
 
   // Анимация вращения к нужному сектору
   const segCenter = prizeIdx * segAngle + segAngle / 2;
@@ -651,9 +677,14 @@ function showResult(idx) {
 
 function closeModal() {
   document.getElementById('modal').classList.remove('show');
-  document.getElementById('controls').style.display = 'none';
-  document.getElementById('alreadyPlayed').style.display = 'block';
-  document.getElementById('prizeReminder').textContent = '🎁 ' + userResult.text;
+  if (devMode) {
+    hasPlayed = false;
+    document.getElementById('spinBtn').disabled = false;
+  } else {
+    document.getElementById('controls').style.display = 'none';
+    document.getElementById('alreadyPlayed').style.display = 'block';
+    document.getElementById('prizeReminder').textContent = '🎁 ' + userResult.text;
+  }
 }
 
 function launchConfetti() {
