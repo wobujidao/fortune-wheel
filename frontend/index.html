@@ -75,7 +75,8 @@
     pointer-events: none;
   }
 
-  .pointer-wrap {
+  /* Pointer top (стрелка сверху) */
+  .pointer-top {
     position: absolute;
     top: 13px;
     left: 50%;
@@ -84,17 +85,38 @@
     filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
   }
 
-  .pointer-wrap svg {
-    display: block;
+  .pointer-top svg { display: block; }
+
+  .pointer-top.bounce {
+    animation: pointerTopBounce 0.12s ease;
   }
 
-  .pointer-wrap.bounce {
-    animation: pointerBounce 0.12s ease;
-  }
-
-  @keyframes pointerBounce {
+  @keyframes pointerTopBounce {
     0%, 100% { transform: translateX(-50%) rotate(180deg); }
     50% { transform: translateX(-50%) rotate(186deg); }
+  }
+
+  /* Pointer center (стрелка из центра вверх) */
+  .pointer-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    transform-origin: bottom center;
+    z-index: 10;
+    filter: drop-shadow(0 -2px 6px rgba(0,0,0,0.5));
+    display: none;
+  }
+
+  .pointer-center svg { display: block; }
+
+  .pointer-center.bounce {
+    animation: pointerCenterBounce 0.12s ease;
+  }
+
+  @keyframes pointerCenterBounce {
+    0%, 100% { transform: translate(-50%, -100%) rotate(0deg); }
+    50% { transform: translate(-50%, -100%) rotate(-4deg); }
   }
 
   .legend {
@@ -371,7 +393,7 @@
   <div class="wheel-outer">
     <canvas id="lights" width="360" height="360"></canvas>
     <canvas id="wheel" width="300" height="300"></canvas>
-    <div class="pointer-wrap" id="pointer">
+    <div class="pointer-top" id="pointerTop">
       <svg width="32" height="38" viewBox="0 0 32 38">
         <defs>
           <linearGradient id="gld" x1="0" y1="0" x2="0" y2="1">
@@ -381,6 +403,18 @@
           </linearGradient>
         </defs>
         <polygon points="16,0 32,28 24,28 24,38 8,38 8,28 0,28" fill="url(#gld)" stroke="#a07000" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="pointer-center" id="pointerCenter">
+      <svg width="20" height="70" viewBox="0 0 20 70">
+        <defs>
+          <linearGradient id="gldC" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fff7b0"/>
+            <stop offset="50%" stop-color="#ffd700"/>
+            <stop offset="100%" stop-color="#b8860b"/>
+          </linearGradient>
+        </defs>
+        <polygon points="10,0 18,14 13,14 13,70 7,70 7,14 2,14" fill="url(#gldC)" stroke="#a07000" stroke-width="1"/>
       </svg>
     </div>
   </div>
@@ -432,6 +466,7 @@ let currentAngle = 0;
 let spinning = false;
 let hasPlayed = false;
 let userResult = null;
+let pointerStyle = 'top';
 const devMode = localStorage.getItem('devMode') === '1';
 
 // ---- Toast ----
@@ -505,6 +540,19 @@ function toggleSound() {
 // Инициализация иконки звука
 document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
 
+// ---- Pointer style ----
+function applyPointerStyle(style) {
+  pointerStyle = style;
+  document.getElementById('pointerTop').style.display = style === 'top' ? '' : 'none';
+  document.getElementById('pointerCenter').style.display = style === 'center' ? '' : 'none';
+}
+
+function getActivePointer() {
+  return pointerStyle === 'center'
+    ? document.getElementById('pointerCenter')
+    : document.getElementById('pointerTop');
+}
+
 // ---- Canvas ----
 const canvas = document.getElementById('wheel');
 const ctx = canvas.getContext('2d');
@@ -524,6 +572,15 @@ function apiHeaders() {
 
 // ---- Загрузка призов и проверка статуса ----
 async function init() {
+  // Загружаем настройки
+  try {
+    const sRes = await fetch('/api/settings');
+    if (sRes.ok) {
+      const settings = await sRes.json();
+      if (settings.pointer_style) applyPointerStyle(settings.pointer_style);
+    }
+  } catch {}
+
   try {
     const res = await fetch('/api/prizes');
     const prizes = await res.json();
@@ -796,7 +853,7 @@ async function spin() {
       lastSeg = seg;
       playTick();
       haptic('impactOccurred', 'light');
-      const ptr = document.getElementById('pointer');
+      const ptr = getActivePointer();
       ptr.classList.remove('bounce');
       void ptr.offsetWidth;
       ptr.classList.add('bounce');

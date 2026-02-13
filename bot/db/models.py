@@ -62,6 +62,13 @@ class Admin(Base):
     )
 
 
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

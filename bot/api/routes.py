@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 
 from bot.api.auth import get_current_user, require_admin, require_viewer, validate_init_data
 from bot.db.database import async_session
-from bot.db.models import Admin, AuditLog, Prize, Spin
+from bot.db.models import Admin, AuditLog, Prize, Setting, Spin
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +125,16 @@ class AuditLogOut(BaseModel):
     created_at: str
 
 
+class SettingUpdate(BaseModel):
+    key: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., min_length=1, max_length=500)
+
+
+ALLOWED_SETTINGS: dict[str, list[str]] = {
+    "pointer_style": ["top", "center"],
+}
+
+
 # ---------------------------------------------------------------------------
 # Роутеры
 # ---------------------------------------------------------------------------
@@ -225,6 +235,15 @@ async def check_user(tg_user_id: int) -> CheckOut:
             prize_color=prize.color if prize else "#ffd700",
         ),
     )
+
+
+@public_router.get("/settings")
+async def get_settings() -> dict[str, str]:
+    """Публичные настройки приложения."""
+    async with async_session() as session:
+        result = await session.execute(select(Setting))
+        settings = result.scalars().all()
+    return {s.key: s.value for s in settings}
 
 
 # ========================= Админские эндпоинты =============================
@@ -373,6 +392,41 @@ async def get_audit_log(
         )
         for log in logs
     ]
+
+
+# ---- Настройки ----
+
+
+@admin_router.put("/settings")
+async def update_setting(
+    data: SettingUpdate,
+    user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, str]:
+    """Обновить настройку."""
+    if data.key not in ALLOWED_SETTINGS:
+        raise HTTPException(status_code=400, detail=f"Неизвестная настройка: {data.key}")
+    allowed = ALLOWED_SETTINGS[data.key]
+    if data.value not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Допустимые значения для {data.key}: {', '.join(allowed)}",
+        )
+    async with async_session() as session:
+        result = await session.execute(
+            select(Setting).where(Setting.key == data.key)
+        )
+        setting = result.scalar_one_or_none()
+        if setting:
+            setting.value = data.value
+        else:
+            session.add(Setting(key=data.key, value=data.value))
+        await session.commit()
+    logger.info("Админ %d изменил настройку %s=%s", user["id"], data.key, data.value)
+    await log_audit(
+        user["id"], _admin_display_name(user), "update_setting",
+        f"{data.key}={data.value}",
+    )
+    return {"status": "ok"}
 
 
 # ---- Управление призами ----

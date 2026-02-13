@@ -6,7 +6,7 @@ from sqlalchemy import inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from bot.config import ADMIN_IDS, DB_PATH
-from bot.db.models import Admin, AuditLog, Base, Prize  # noqa: F401
+from bot.db.models import Admin, AuditLog, Base, Prize, Setting  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,14 @@ async def init_db() -> None:
             for p in DEFAULT_PRIZES:
                 session.add(Prize(**p))
             logger.info("Сидированы %d призов по умолчанию", len(DEFAULT_PRIZES))
+
+        # Сидируем настройки по умолчанию
+        result = await session.execute(
+            select(Setting).where(Setting.key == "pointer_style")
+        )
+        if result.scalar_one_or_none() is None:
+            session.add(Setting(key="pointer_style", value="top"))
+            logger.info("Сидирована настройка pointer_style=top")
 
         # Сидируем начальных админов из ADMIN_IDS
         for admin_id in ADMIN_IDS:

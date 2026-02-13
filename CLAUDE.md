@@ -64,19 +64,19 @@ FastAPI + aiogram polling работают в одном процессе:
 
 ### Frontend
 
-- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Поддерживает режим разработки (dev mode) через `localStorage`.
-- `frontend/admin.html` — админка с четырьмя вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика — графики распределения призов и вращений по дням), Призы (CRUD с inline-формой + drag & drop сортировка), Доступ (управление ролями, имена через Telegram Bot API), Лог (аудит-лог действий администраторов). Toggle «Режим разработки», BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
+- `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360). Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Два стиля указателя: top (стрелка сверху) и center (стрелка из хаба вверх) — переключается в админке. Поддерживает режим разработки (dev mode) через `localStorage`.
+- `frontend/admin.html` — админка с пятью вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика), Призы (CRUD + drag & drop сортировка), Доступ (управление ролями), Настройки (стиль указателя колеса), Лог (аудит-лог). Toggle «Режим разработки», BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
 
 ### API (`bot/api/routes.py`)
 
-- Public: `GET /api/prizes`, `POST /api/spin`, `GET /api/check/{tg_user_id}`
-- Admin: CRUD призов, результаты, CSV-экспорт, сброс, управление пользователями, аудит-лог
+- Public: `GET /api/prizes`, `POST /api/spin`, `GET /api/check/{tg_user_id}`, `GET /api/settings`
+- Admin: CRUD призов, результаты, CSV-экспорт, сброс, управление пользователями, аудит-лог, настройки (`PUT /api/admin/settings`)
 - Auth: `bot/api/auth.py` — HMAC-SHA256 валидация Telegram initData с защитой от невалидного JSON/auth_date
 - Логирование: все админские операции логируются через `logger.info()` + записываются в таблицу `audit_log` (log_audit() не роняет основной запрос при ошибке)
 
 ### Database (`bot/db/`)
 
-SQLite, четыре таблицы: `prizes`, `spins`, `admins`, `audit_log`. При первом запуске `init_db()` создаёт таблицы и сидит 6 дефолтных призов + админов из `ADMIN_IDS`. Индексы на `spins.created_at` и `audit_log.created_at`.
+SQLite, пять таблиц: `prizes`, `spins`, `admins`, `audit_log`, `settings`. При первом запуске `init_db()` создаёт таблицы и сидит 6 дефолтных призов + админов из `ADMIN_IDS` + настройку `pointer_style=top`. Индексы на `spins.created_at` и `audit_log.created_at`.
 
 ### Bot commands (`bot/handlers/`)
 

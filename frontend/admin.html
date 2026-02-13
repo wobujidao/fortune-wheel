@@ -198,6 +198,25 @@
     background: rgba(255,255,255,0.08);
   }
 
+  /* Settings pointer style */
+  .style-options { display: flex; gap: 12px; flex-wrap: wrap; }
+  .style-card {
+    flex: 1;
+    min-width: 120px;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .style-card:hover { border-color: rgba(255,215,0,0.4); }
+  .style-card.selected { border-color: #ffd700; background: rgba(255,215,0,0.08); }
+  .style-card .style-icon { font-size: 40px; margin-bottom: 8px; display: block; }
+  .style-card .style-label { font-size: 13px; font-weight: 600; color: #e0e0e0; }
+  .style-card .style-desc { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
   @media (max-width: 600px) {
     table { font-size: 11px; }
     th, td { padding: 7px 4px; }
@@ -213,6 +232,7 @@
     <div class="tab active" onclick="showTab('results')">Результаты</div>
     <div class="tab" onclick="showTab('prizes')">Призы</div>
     <div class="tab" onclick="showTab('users')">Доступ</div>
+    <div class="tab" onclick="showTab('settings')">Настройки</div>
     <div class="tab" onclick="showTab('audit')">Лог</div>
   </div>
 
@@ -278,6 +298,23 @@
     </table>
   </div>
 
+  <!-- ============ Настройки ============ -->
+  <div id="panel-settings" class="panel">
+    <h3 style="font-size:14px; color:#ffd700; margin-bottom:12px;">Стиль указателя</h3>
+    <div class="style-options" id="pointerStyleOptions">
+      <div class="style-card" data-value="top" onclick="setPointerStyle('top')">
+        <span class="style-icon">⬇️</span>
+        <div class="style-label">Сверху</div>
+        <div class="style-desc">Стрелка сверху колеса, остриём к центру</div>
+      </div>
+      <div class="style-card" data-value="center" onclick="setPointerStyle('center')">
+        <span class="style-icon">⬆️</span>
+        <div class="style-label">Из центра</div>
+        <div class="style-desc">Стрелка из хаба вверх, указывает на приз</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ Лог ============ -->
   <div id="panel-audit" class="panel">
     <table>
@@ -331,7 +368,7 @@ function showMsg(text, ok) {
   setTimeout(() => { el.className = 'msg'; }, 3000);
 }
 
-const TAB_NAMES = { results: 'Результаты', prizes: 'Призы', users: 'Доступ', audit: 'Лог' };
+const TAB_NAMES = { results: 'Результаты', prizes: 'Призы', users: 'Доступ', settings: 'Настройки', audit: 'Лог' };
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.textContent.trim() === TAB_NAMES[name]);
@@ -341,6 +378,7 @@ function showTab(name) {
   if (name === 'results') loadResults();
   if (name === 'prizes') loadPrizes();
   if (name === 'users') loadUsers();
+  if (name === 'settings') loadSettings();
   if (name === 'audit') loadAudit();
 }
 
@@ -777,6 +815,39 @@ async function savePrizeOrder() {
   }
 }
 
+// ---- Настройки ----
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const data = await res.json();
+    highlightPointerStyle(data.pointer_style || 'top');
+  } catch {}
+}
+
+function highlightPointerStyle(value) {
+  document.querySelectorAll('#pointerStyleOptions .style-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.value === value);
+  });
+}
+
+async function setPointerStyle(value) {
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ key: 'pointer_style', value })
+    });
+    if (res.ok) {
+      showMsg('Стиль указателя обновлён: ' + (value === 'top' ? 'сверху' : 'из центра'), true);
+      highlightPointerStyle(value);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showMsg(err.detail || 'Ошибка', false);
+    }
+  } catch { showMsg('Сетевая ошибка', false); }
+}
+
 // ---- Аудит-лог ----
 const ACTION_LABELS = {
   delete_spin: '🗑 Удаление вращения',
@@ -787,6 +858,7 @@ const ACTION_LABELS = {
   reorder_prizes: '↕️ Сортировка призов',
   add_user: '👤 Добавление пользователя',
   delete_user: '🗑 Удаление пользователя',
+  update_setting: '⚙️ Изменение настройки',
 };
 
 async function loadAudit() {
