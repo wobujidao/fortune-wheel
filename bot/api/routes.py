@@ -82,20 +82,20 @@ class PrizeCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=200)
     icon: str = Field(..., min_length=1, max_length=10)
     color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
-    position: int = Field(0, ge=0, le=100)
+    position: int = Field(1, ge=1, le=100)
 
 
 class PrizeUpdate(BaseModel):
     text: str | None = Field(None, min_length=1, max_length=200)
     icon: str | None = Field(None, min_length=1, max_length=10)
     color: str | None = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
-    position: int | None = Field(None, ge=0, le=100)
+    position: int | None = Field(None, ge=1, le=100)
     is_active: bool | None = None
 
 
 class ReorderItem(BaseModel):
     id: int
-    position: int = Field(..., ge=0, le=100)
+    position: int = Field(..., ge=1, le=100)
 
 
 class AdminCreate(BaseModel):
@@ -435,6 +435,23 @@ async def create_prize(
     )
 
 
+@admin_router.put("/prizes/reorder")
+async def reorder_prizes(
+    items: list[ReorderItem],
+    user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, str]:
+    """Изменить порядок секторов."""
+    async with async_session() as session:
+        for item in items:
+            await session.execute(
+                update(Prize).where(Prize.id == item.id).values(position=item.position)
+            )
+        await session.commit()
+    logger.info("Админ %d изменил порядок призов (%d шт.)", user["id"], len(items))
+    await log_audit(user["id"], _admin_display_name(user), "reorder_prizes", f"{len(items)} призов")
+    return {"status": "ok"}
+
+
 @admin_router.put("/prizes/{prize_id}", response_model=PrizeOut)
 async def update_prize(
     prize_id: int,
@@ -492,23 +509,6 @@ async def delete_prize(
         await session.delete(prize)
         await session.commit()
     await log_audit(user["id"], _admin_display_name(user), "delete_prize", f"#{prize_id}: {prize_text}")
-    return {"status": "ok"}
-
-
-@admin_router.put("/prizes/reorder")
-async def reorder_prizes(
-    items: list[ReorderItem],
-    user: dict[str, Any] = Depends(require_admin),
-) -> dict[str, str]:
-    """Изменить порядок секторов."""
-    async with async_session() as session:
-        for item in items:
-            await session.execute(
-                update(Prize).where(Prize.id == item.id).values(position=item.position)
-            )
-        await session.commit()
-    logger.info("Админ %d изменил порядок призов (%d шт.)", user["id"], len(items))
-    await log_audit(user["id"], _admin_display_name(user), "reorder_prizes", f"{len(items)} призов")
     return {"status": "ok"}
 
 

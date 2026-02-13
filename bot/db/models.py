@@ -17,7 +17,7 @@ class Prize(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     icon: Mapped[str] = mapped_column(Text, nullable=False)
     color: Mapped[str] = mapped_column(Text, nullable=False)
-    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now

@@ -259,7 +259,7 @@
       <div class="form-group"><label>Текст приза</label><input id="newPrizeText" placeholder="Дополнительный выходной"></div>
       <div class="form-group"><label>Иконка (эмодзи)</label><input id="newPrizeIcon" placeholder="🌴" maxlength="4"></div>
       <div class="form-group"><label>Цвет</label><input id="newPrizeColor" type="color" value="#4A90D9"></div>
-      <div class="form-group"><label>Позиция</label><input id="newPrizePosition" type="number" min="0" max="100" value="0"></div>
+      <div class="form-group"><label>Позиция</label><input id="newPrizePosition" type="number" min="1" max="100" value="1"></div>
       <div class="form-group" id="prizeActiveGroup" style="display:none;">
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
           <input type="checkbox" id="newPrizeActive" checked> Активен
@@ -480,7 +480,7 @@ function showAddPrize() {
   document.getElementById('newPrizeText').value = '';
   document.getElementById('newPrizeIcon').value = '';
   document.getElementById('newPrizeColor').value = '#4A90D9';
-  document.getElementById('newPrizePosition').value = '0';
+  document.getElementById('newPrizePosition').value = '1';
   document.getElementById('newPrizeActive').checked = true;
   document.getElementById('prizeActiveGroup').style.display = 'none';
   document.getElementById('prizeForm').style.display = 'block';
@@ -507,7 +507,7 @@ async function savePrize() {
   const text = document.getElementById('newPrizeText').value.trim();
   const icon = document.getElementById('newPrizeIcon').value.trim();
   const color = document.getElementById('newPrizeColor').value;
-  const position = parseInt(document.getElementById('newPrizePosition').value) || 0;
+  const position = parseInt(document.getElementById('newPrizePosition').value) || 1;
   if (!text || !icon) { showMsg('Заполните текст и иконку', false); return; }
 
   let res;
@@ -736,7 +736,7 @@ async function savePrizeOrder() {
   const items = [];
   rows.forEach((tr, i) => {
     const id = parseInt(tr.dataset.prizeId);
-    if (id) items.push({ id, position: i });
+    if (id) items.push({ id, position: i + 1 });
   });
   if (!items.length) return;
   try {
@@ -747,6 +747,7 @@ async function savePrizeOrder() {
     });
     if (res.ok) {
       showMsg('Порядок сохранён', true);
+      loadPrizes();
     } else {
       showMsg('Ошибка сохранения порядка', false);
       loadPrizes();
