@@ -296,18 +296,27 @@ async function resetResults() {
 async function exportCSV() {
   try {
     const res = await fetch('/api/admin/export', { headers: headers() });
-    if (!res.ok) throw new Error(res.status);
-    const blob = await res.blob();
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+
+    // В Telegram WebView: копируем в буфер обмена (самый надёжный способ)
+    if (tg) {
+      await navigator.clipboard.writeText(text);
+      showMsg('CSV скопирован в буфер обмена — вставьте в файл или чат', true);
+      return;
+    }
+
+    // В обычном браузере: скачиваем файл
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'results.csv';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
   } catch (e) {
-    showMsg('Ошибка экспорта', false);
+    showMsg('Ошибка экспорта: ' + e.message, false);
   }
 }
 

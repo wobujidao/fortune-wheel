@@ -5,12 +5,12 @@ import io
 import random
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import delete, func, select, update
 
-from bot.api.auth import get_current_user, require_admin, require_viewer
+from bot.api.auth import get_current_user, require_admin, require_viewer, validate_init_data
 from bot.db.database import async_session
 from bot.db.models import Admin, Prize, Spin
 
@@ -250,9 +250,34 @@ async def reset_results(
 
 @admin_router.get("/export")
 async def export_results(
-    _user: dict[str, Any] = Depends(require_viewer),
+    request: Request,
 ) -> StreamingResponse:
-    """Экспорт результатов в CSV."""
+    """Экспорт результатов в CSV.
+
+    Принимает initData через заголовок или query-параметр (для скачивания
+    через системный браузер из Telegram WebView).
+    """
+    init_data = (
+        request.headers.get("X-Telegram-Init-Data")
+        or request.query_params.get("init_data")
+        or ""
+    )
+    if not init_data:
+        raise HTTPException(status_code=401, detail="Отсутствует авторизация")
+    try:
+        data = validate_init_data(init_data)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    user = data.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+    # Проверяем роль viewer
+    tg_user_id = user["id"]
+    async with async_session() as sess:
+        adm = await sess.execute(select(Admin).where(Admin.tg_user_id == tg_user_id))
+        if adm.scalar_one_or_none() is None:
+            raise HTTPException(status_code=403, detail="Доступ запрещён")
+
     async with async_session() as session:
         result = await session.execute(select(Spin).order_by(Spin.created_at.desc()))
         spins = result.scalars().all()
