@@ -406,7 +406,7 @@
       </svg>
     </div>
     <div class="pointer-center" id="pointerCenter">
-      <svg width="20" height="70" viewBox="0 0 20 70">
+      <svg width="44" height="70" viewBox="0 0 44 70">
         <defs>
           <linearGradient id="gldC" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#fff7b0"/>
@@ -414,7 +414,7 @@
             <stop offset="100%" stop-color="#b8860b"/>
           </linearGradient>
         </defs>
-        <polygon points="10,0 18,14 13,14 13,70 7,70 7,14 2,14" fill="url(#gldC)" stroke="#a07000" stroke-width="1"/>
+        <polygon points="22,0 44,70 0,70" fill="url(#gldC)" stroke="#a07000" stroke-width="1"/>
       </svg>
     </div>
   </div>
@@ -544,7 +544,7 @@ document.getElementById('soundToggle').textContent = soundEnabled ? 'ðŸ”Š' : 'ðŸ
 function applyPointerStyle(style) {
   pointerStyle = style;
   document.getElementById('pointerTop').style.display = style === 'top' ? '' : 'none';
-  document.getElementById('pointerCenter').style.display = style === 'center' ? '' : 'none';
+  document.getElementById('pointerCenter').style.display = style === 'center' ? 'block' : 'none';
 }
 
 function getActivePointer() {
