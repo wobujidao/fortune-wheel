@@ -271,6 +271,13 @@ fortune-wheel/
 | `bot` | Python: aiogram 3 + FastAPI | 8000 (внутренний) |
 | `nginx` | Reverse proxy + статика | 8000 → 80 (SSL на Nginx Proxy Manager) |
 
+### Производительность
+
+- **SQLite WAL mode** — `PRAGMA journal_mode=WAL` при старте, позволяет параллельные чтения во время записи
+- **busy_timeout 30с** — при блокировке БД запрос ожидает до 30 секунд вместо мгновенной ошибки
+- **Rate limiting по реальному IP** — nginx использует `X-Real-IP` от Nginx Proxy Manager, а не IP прокси
+- Рассчитано на **300+ одновременных пользователей**
+
 ### Схема БД (SQLite)
 
 ```mermaid
