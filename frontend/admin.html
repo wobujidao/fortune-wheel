@@ -554,40 +554,44 @@ async function savePrize() {
   const position = parseInt(document.getElementById('newPrizePosition').value) || 1;
   if (!text || !icon) { showMsg('Заполните текст и иконку', false); return; }
 
-  let res;
-  if (editId) {
-    const is_active = document.getElementById('newPrizeActive').checked;
-    res = await fetch('/api/admin/prizes/' + editId, {
-      method: 'PUT',
-      headers: headers(),
-      body: JSON.stringify({ text, icon, color, position, is_active })
-    });
-  } else {
-    res = await fetch('/api/admin/prizes', {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ text, icon, color, position })
-    });
-  }
+  try {
+    let res;
+    if (editId) {
+      const is_active = document.getElementById('newPrizeActive').checked;
+      res = await fetch('/api/admin/prizes/' + editId, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ text, icon, color, position, is_active })
+      });
+    } else {
+      res = await fetch('/api/admin/prizes', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ text, icon, color, position })
+      });
+    }
 
-  if (res.ok) {
-    showMsg(editId ? 'Приз обновлён' : 'Приз добавлен', true);
-    closePrizeForm();
-    loadPrizes();
-  } else {
-    const err = await res.json().catch(() => ({}));
-    showMsg(err.detail || 'Ошибка', false);
-  }
+    if (res.ok) {
+      showMsg(editId ? 'Приз обновлён' : 'Приз добавлен', true);
+      closePrizeForm();
+      loadPrizes();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showMsg(err.detail || 'Ошибка', false);
+    }
+  } catch { showMsg('Сетевая ошибка', false); }
 }
 
 async function deletePrize(id) {
   if (!confirm('Удалить приз #' + id + '?')) return;
-  const res = await fetch('/api/admin/prizes/' + id, { method: 'DELETE', headers: headers() });
-  if (res.ok) { showMsg('Приз удалён', true); loadPrizes(); }
-  else {
-    const err = await res.json().catch(() => ({}));
-    showMsg(err.detail || 'Ошибка', false);
-  }
+  try {
+    const res = await fetch('/api/admin/prizes/' + id, { method: 'DELETE', headers: headers() });
+    if (res.ok) { showMsg('Приз удалён', true); loadPrizes(); }
+    else {
+      const err = await res.json().catch(() => ({}));
+      showMsg(err.detail || 'Ошибка', false);
+    }
+  } catch { showMsg('Сетевая ошибка', false); }
 }
 
 // ---- Пользователи ----
@@ -626,19 +630,21 @@ async function addUser() {
   const role = document.getElementById('newUserRole').value;
   if (!tg_user_id) { showMsg('Введите Telegram ID', false); return; }
 
-  const res = await fetch('/api/admin/users', {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ tg_user_id, role })
-  });
-  if (res.ok) {
-    showMsg('Пользователь добавлен', true);
-    document.getElementById('newUserId').value = '';
-    loadUsers();
-  } else {
-    const err = await res.json().catch(() => ({}));
-    showMsg(err.detail || 'Ошибка', false);
-  }
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ tg_user_id, role })
+    });
+    if (res.ok) {
+      showMsg('Пользователь добавлен', true);
+      document.getElementById('newUserId').value = '';
+      loadUsers();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showMsg(err.detail || 'Ошибка', false);
+    }
+  } catch { showMsg('Сетевая ошибка', false); }
 }
 
 async function deleteUser(id) {
