@@ -226,13 +226,21 @@
     <div class="actions">
       <button class="btn btn-green" onclick="showAddPrize()">➕ Добавить приз</button>
     </div>
-    <div id="addPrizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+    <div id="prizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+      <div id="prizeFormTitle" style="font-size:14px; font-weight:600; color:#ffd700; margin-bottom:12px;">Новый приз</div>
+      <input type="hidden" id="editPrizeId" value="">
       <div class="form-group"><label>Текст приза</label><input id="newPrizeText" placeholder="Дополнительный выходной"></div>
       <div class="form-group"><label>Иконка (эмодзи)</label><input id="newPrizeIcon" placeholder="🌴" maxlength="4"></div>
       <div class="form-group"><label>Цвет</label><input id="newPrizeColor" type="color" value="#4A90D9"></div>
+      <div class="form-group"><label>Позиция</label><input id="newPrizePosition" type="number" min="0" max="100" value="0"></div>
+      <div class="form-group" id="prizeActiveGroup" style="display:none;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="newPrizeActive" checked> Активен
+        </label>
+      </div>
       <div style="display:flex; gap:8px; margin-top:8px;">
-        <button class="btn btn-green" onclick="addPrize()">Сохранить</button>
-        <button class="btn btn-small" style="background:rgba(255,255,255,0.1);color:#ccc;" onclick="document.getElementById('addPrizeForm').style.display='none'">Отмена</button>
+        <button class="btn btn-green" onclick="savePrize()">Сохранить</button>
+        <button class="btn btn-small" style="background:rgba(255,255,255,0.1);color:#ccc;" onclick="closePrizeForm()">Отмена</button>
       </div>
     </div>
     <table>
@@ -408,6 +416,12 @@ async function loadPrizes() {
     tr.appendChild(tdColor);
     const tdActive = document.createElement('td'); tdActive.textContent = p.is_active ? '✅' : '❌'; tr.appendChild(tdActive);
     const tdBtn = document.createElement('td');
+    tdBtn.style.cssText = 'display:flex; gap:4px;';
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn btn-gold btn-small';
+    btnEdit.textContent = '✏️';
+    btnEdit.addEventListener('click', () => editPrize(p));
+    tdBtn.appendChild(btnEdit);
     const btn = document.createElement('button');
     btn.className = 'btn btn-red btn-small';
     btn.textContent = '✕';
@@ -419,25 +433,60 @@ async function loadPrizes() {
 }
 
 function showAddPrize() {
-  document.getElementById('addPrizeForm').style.display = 'block';
+  document.getElementById('editPrizeId').value = '';
+  document.getElementById('prizeFormTitle').textContent = 'Новый приз';
+  document.getElementById('newPrizeText').value = '';
+  document.getElementById('newPrizeIcon').value = '';
+  document.getElementById('newPrizeColor').value = '#4A90D9';
+  document.getElementById('newPrizePosition').value = '0';
+  document.getElementById('newPrizeActive').checked = true;
+  document.getElementById('prizeActiveGroup').style.display = 'none';
+  document.getElementById('prizeForm').style.display = 'block';
 }
 
-async function addPrize() {
+function editPrize(p) {
+  document.getElementById('editPrizeId').value = p.id;
+  document.getElementById('prizeFormTitle').textContent = 'Редактирование приза #' + p.id;
+  document.getElementById('newPrizeText').value = p.text;
+  document.getElementById('newPrizeIcon').value = p.icon;
+  document.getElementById('newPrizeColor').value = p.color;
+  document.getElementById('newPrizePosition').value = p.position;
+  document.getElementById('newPrizeActive').checked = p.is_active;
+  document.getElementById('prizeActiveGroup').style.display = 'block';
+  document.getElementById('prizeForm').style.display = 'block';
+}
+
+function closePrizeForm() {
+  document.getElementById('prizeForm').style.display = 'none';
+}
+
+async function savePrize() {
+  const editId = document.getElementById('editPrizeId').value;
   const text = document.getElementById('newPrizeText').value.trim();
   const icon = document.getElementById('newPrizeIcon').value.trim();
   const color = document.getElementById('newPrizeColor').value;
+  const position = parseInt(document.getElementById('newPrizePosition').value) || 0;
   if (!text || !icon) { showMsg('Заполните текст и иконку', false); return; }
 
-  const res = await fetch('/api/admin/prizes', {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ text, icon, color, position: 0 })
-  });
+  let res;
+  if (editId) {
+    const is_active = document.getElementById('newPrizeActive').checked;
+    res = await fetch('/api/admin/prizes/' + editId, {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ text, icon, color, position, is_active })
+    });
+  } else {
+    res = await fetch('/api/admin/prizes', {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ text, icon, color, position })
+    });
+  }
+
   if (res.ok) {
-    showMsg('Приз добавлен', true);
-    document.getElementById('addPrizeForm').style.display = 'none';
-    document.getElementById('newPrizeText').value = '';
-    document.getElementById('newPrizeIcon').value = '';
+    showMsg(editId ? 'Приз обновлён' : 'Приз добавлен', true);
+    closePrizeForm();
     loadPrizes();
   } else {
     const err = await res.json().catch(() => ({}));
