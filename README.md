@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Canvas%20API-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
   <img src="https://img.shields.io/badge/Ruff-30173D?style=for-the-badge&logo=ruff&logoColor=white" />
   <img src="https://img.shields.io/badge/Pydantic-v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
 Telegram Mini App — интерактивное «Колесо Фортуны» для сотрудников ЦБ МО (Центрального Бюджетного Управления Московской Области) к празднику 23 Февраля.
