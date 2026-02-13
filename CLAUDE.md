@@ -47,7 +47,7 @@ FastAPI + aiogram polling работают в одном процессе:
 
 ### Docker-архитектура
 
-- `bot` (fortune-bot) — Python: aiogram + FastAPI, expose 8000 (внутренний), non-root user `appuser`
+- `bot` (fortune-bot) — Python: aiogram + FastAPI, expose 8000 (внутренний), non-root user `appuser`, entrypoint с `gosu` для фикса прав на volume
 - `nginx` (fortune-nginx) — reverse proxy, порт 8000:80, раздаёт `frontend/` как статику
 - Внешний Nginx Proxy Manager (192.168.5.4) проксирует на 192.168.5.11:8000
 - Healthcheck: бот проверяется каждые 30s через `/health`, nginx зависит от `service_healthy`
@@ -93,6 +93,7 @@ SQLite, три таблицы: `prizes`, `spins`, `admins`. При первом 
 - **Админка**: открывается только через WebApp-кнопку в Telegram (нужен initData для авторизации)
 - **Кэширование**: Telegram WebView агрессивно кэширует — nginx отдаёт `Cache-Control: no-cache, no-store` на все ответы
 - **Memory leaks**: Canvas-анимации (колесо, звёзды) используют отслеживание RAF ID + cancelAnimationFrame при resize
+- **SQLite readonly**: Docker volume `data/` создаётся от root — `entrypoint.sh` делает `chown appuser` перед запуском через `gosu`
 
 ## Key Conventions
 
