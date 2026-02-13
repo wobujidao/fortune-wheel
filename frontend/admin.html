@@ -670,7 +670,6 @@ function renderResults(data) {
     const tdTgId = document.createElement('td');
     tdTgId.textContent = s.tg_user_id;
     tdTgId.dataset.label = 'Telegram ID';
-    tdTgId.classList.add('hide-mobile');
     tr.appendChild(tdTgId);
 
     const tdUser = document.createElement('td');
@@ -934,7 +933,6 @@ async function loadUsers() {
     const tdTgId = document.createElement('td');
     tdTgId.textContent = u.tg_user_id;
     tdTgId.dataset.label = 'Telegram ID';
-    tdTgId.classList.add('hide-mobile');
     tr.appendChild(tdTgId);
 
     const tdUser = document.createElement('td');
