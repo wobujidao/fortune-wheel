@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 engine = create_async_engine(
     f"sqlite+aiosqlite:///{DB_PATH}",
     echo=False,
-    connect_args={"timeout": 30},
+    connect_args={"timeout": 5},
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -31,7 +31,7 @@ async def init_db() -> None:
     """Создаёт таблицы и сидирует начальные данные (призы + админы из .env)."""
     async with engine.begin() as conn:
         await conn.execute(text("PRAGMA journal_mode=WAL"))
-        await conn.execute(text("PRAGMA busy_timeout=30000"))
+        await conn.execute(text("PRAGMA busy_timeout=5000"))
         await conn.run_sync(Base.metadata.create_all)
 
         # Миграция: добавляем колонки к admins, если их нет
