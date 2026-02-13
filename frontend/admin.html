@@ -13,32 +13,39 @@
     background: #1a1a2e;
     color: #e0e0e0;
     min-height: 100vh;
-    padding: 20px;
+    padding: 16px;
   }
 
   h1 {
     text-align: center;
-    font-size: 22px;
+    font-size: 18px;
     color: #ffd700;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
 
+  /* ---- Табы ---- */
   .tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
   }
+  .tabs::-webkit-scrollbar { display: none; }
 
   .tab {
-    padding: 10px 18px;
+    padding: 8px 14px;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 8px;
     color: #ccc;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .tab:hover { background: rgba(255,255,255,0.12); }
@@ -47,6 +54,7 @@
   .panel { display: none; }
   .panel.active { display: block; }
 
+  /* ---- Таблицы ---- */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -62,6 +70,7 @@
 
   th { color: #ffd700; font-weight: 600; font-size: 12px; text-transform: uppercase; }
 
+  /* ---- Кнопки ---- */
   .btn {
     padding: 8px 16px;
     border: none;
@@ -77,20 +86,23 @@
   .btn-red { background: #e74c3c; color: #fff; }
   .btn-green { background: #27ae60; color: #fff; }
   .btn-small { padding: 5px 10px; font-size: 12px; }
+  .btn-ghost { background: rgba(255,255,255,0.1); color: #ccc; }
 
   .actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 
+  /* ---- Stat card ---- */
   .stat-card {
     background: rgba(255,255,255,0.06);
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px;
     margin-bottom: 12px;
     text-align: center;
   }
 
-  .stat-card .num { font-size: 32px; font-weight: 700; color: #ffd700; }
-  .stat-card .label { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: #ffd700; }
+  .stat-card .label { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
 
+  /* ---- Формы ---- */
   .form-group { margin-bottom: 12px; }
   .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
   .form-group input, .form-group select {
@@ -103,17 +115,7 @@
     font-size: 14px;
   }
 
-  .msg {
-    padding: 10px 14px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    font-size: 13px;
-    display: none;
-  }
-
-  .msg.ok { background: rgba(39,174,96,0.2); color: #2ecc71; display: block; }
-  .msg.err { background: rgba(231,76,60,0.2); color: #e74c3c; display: block; }
-
+  /* ---- No access ---- */
   .no-access {
     text-align: center;
     padding: 60px 20px;
@@ -121,15 +123,15 @@
     font-size: 16px;
   }
 
+  /* ---- Dev mode toggle ---- */
   .dev-toggle {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 10px;
-    margin-bottom: 20px;
-    padding: 10px 16px;
+    padding: 12px 16px;
     background: rgba(255,255,255,0.04);
     border-radius: 10px;
+    margin-top: 24px;
   }
 
   .dev-toggle label {
@@ -173,13 +175,13 @@
     transform: translateX(20px);
   }
 
-  /* Drag & Drop */
+  /* ---- Drag & Drop ---- */
   tr[draggable="true"] { cursor: grab; }
   tr[draggable="true"]:active { cursor: grabbing; }
   tr.dragging { opacity: 0.4; }
   tr.drag-over td { border-top: 2px solid #ffd700; }
 
-  /* Stats bars */
+  /* ---- Stats bars ---- */
   .stats-section { margin-bottom: 24px; }
   .stats-section h3 { font-size: 14px; color: #ffd700; margin-bottom: 10px; }
   .stat-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
@@ -188,7 +190,7 @@
   .stat-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ffd700, #ff8c00); transition: width 0.4s ease; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 700; color: #1a1a2e; min-width: 24px; }
   .stat-bar-fill.teal { background: linear-gradient(90deg, #2dd4bf, #0891b2); }
 
-  /* Audit log table */
+  /* ---- Audit badges ---- */
   .action-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -198,7 +200,7 @@
     background: rgba(255,255,255,0.08);
   }
 
-  /* Settings pointer style */
+  /* ---- Settings pointer style ---- */
   .style-options { display: flex; gap: 12px; flex-wrap: wrap; }
   .style-card {
     flex: 1;
@@ -217,130 +219,316 @@
   .style-card .style-label { font-size: 13px; font-weight: 600; color: #e0e0e0; }
   .style-card .style-desc { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
 
+  /* ---- Settings section ---- */
+  .settings-section {
+    margin-bottom: 24px;
+  }
+  .settings-section h3 {
+    font-size: 14px;
+    color: #ffd700;
+    margin-bottom: 12px;
+  }
+
+  /* ---- Toast ---- */
+  .toast-container {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(30,30,58,0.95);
+    border: 1px solid rgba(255,215,0,0.3);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    backdrop-filter: blur(8px);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 3.2s forwards;
+    pointer-events: auto;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.ok { border-color: rgba(39,174,96,0.5); color: #2ecc71; }
+  .toast.error { border-color: rgba(231,76,60,0.5); color: #ff6b6b; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* ---- Confirm dialog ---- */
+  .confirm-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .confirm-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .confirm-dialog {
+    background: linear-gradient(135deg, #1e1e3a, #2a2a4a);
+    border-radius: 16px;
+    padding: 24px 20px;
+    max-width: min(340px, 90vw);
+    width: 100%;
+    border: 1px solid rgba(255,215,0,0.2);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes modalPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .confirm-title { font-size: 16px; font-weight: 700; color: #ffd700; margin-bottom: 8px; }
+  .confirm-text { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 20px; line-height: 1.4; }
+  .confirm-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+  .confirm-buttons .btn { min-width: 80px; padding: 10px 20px; }
+
+  /* ---- Empty state ---- */
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: rgba(255,255,255,0.35);
+    font-size: 14px;
+  }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 8px; display: block; }
+
+  /* ---- Panel loading ---- */
+  .panel-loading {
+    text-align: center;
+    padding: 32px;
+    display: none;
+  }
+  .panel-loading.show { display: block; }
+  .panel-spinner {
+    width: 32px; height: 32px;
+    border: 3px solid rgba(255,215,0,0.2);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: spinLoader 0.8s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spinLoader { to { transform: rotate(360deg); } }
+
+  /* ---- Mobile cards ---- */
   @media (max-width: 600px) {
-    table { font-size: 11px; }
-    th, td { padding: 7px 4px; }
+    body { padding: 12px; }
+
+    table thead { display: none; }
+
+    table tbody tr {
+      display: block;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-bottom: none;
+    }
+
+    /* Drag & drop cards */
+    table tbody tr[draggable="true"] { cursor: grab; }
+    table tbody tr.drag-over { border-top: 2px solid #ffd700; }
+    table tbody tr.drag-over td { border-top: none; }
+
+    table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+      border-bottom: none;
+      font-size: 13px;
+    }
+
+    table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: rgba(255,215,0,0.7);
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    table tbody td.td-actions {
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    table tbody td.td-actions::before { content: none; }
+
+    .hide-mobile { display: none !important; }
+
+    .stat-bar-label { width: 35%; min-width: 60px; font-size: 11px; }
   }
 </style>
 </head>
 <body>
 
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-dialog">
+    <div class="confirm-title" id="confirmTitle"></div>
+    <div class="confirm-text" id="confirmText"></div>
+    <div class="confirm-buttons">
+      <button class="btn btn-ghost" id="confirmNo">Отмена</button>
+      <button class="btn btn-red" id="confirmYes">Да</button>
+    </div>
+  </div>
+</div>
+
 <div id="app" style="display:none; max-width: 800px; margin: 0 auto;">
-  <h1>🔧 Панель администратора</h1>
+  <h1>Панель администратора</h1>
 
   <div class="tabs">
-    <div class="tab active" onclick="showTab('results')">Результаты</div>
-    <div class="tab" onclick="showTab('prizes')">Призы</div>
-    <div class="tab" onclick="showTab('users')">Доступ</div>
-    <div class="tab" onclick="showTab('settings')">Настройки</div>
-    <div class="tab" onclick="showTab('audit')">Лог</div>
+    <div class="tab active" onclick="showTab('results')">📊 Результаты</div>
+    <div class="tab" onclick="showTab('prizes')">🎁 Призы</div>
+    <div class="tab" onclick="showTab('users')">👥 Доступ</div>
+    <div class="tab" onclick="showTab('settings')">⚙️ Настройки</div>
+    <div class="tab" onclick="showTab('audit')">📋 Лог</div>
   </div>
-
-  <div class="dev-toggle">
-    <label for="devModeSwitch">Режим разработки</label>
-    <label class="dev-switch">
-      <input type="checkbox" id="devModeSwitch" onchange="toggleDevMode(this.checked)">
-      <span class="slider"></span>
-    </label>
-  </div>
-
-  <div id="msg" class="msg"></div>
 
   <!-- ============ Результаты ============ -->
   <div id="panel-results" class="panel active">
-    <div class="stat-card">
-      <div class="num" id="totalSpins">—</div>
-      <div class="label">всего вращений</div>
+    <div class="panel-loading" id="loadingResults"><div class="panel-spinner"></div></div>
+    <div id="resultsContent" style="display:none;">
+      <div class="stat-card">
+        <div class="num" id="totalSpins">—</div>
+        <div class="label">всего вращений</div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <input id="searchResults" type="text" placeholder="🔍 Поиск по имени, username или ID..." oninput="filterResults()">
+      </div>
+      <div class="actions">
+        <button class="btn btn-gold" onclick="exportCSV()">📥 CSV</button>
+        <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
+      </div>
+      <div id="statsContainer"></div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyResults" style="display:none;">
+        <span class="empty-icon">🎰</span>
+        Пока нет вращений
+      </div>
     </div>
-    <div class="form-group" style="margin-bottom:12px">
-      <input id="searchResults" type="text" placeholder="🔍 Поиск по имени, username или Telegram ID..." oninput="filterResults()">
-    </div>
-    <div class="actions">
-      <button class="btn btn-gold" onclick="exportCSV()">📥 Экспорт CSV</button>
-      <button class="btn btn-red" onclick="resetResults()">🔄 Сбросить всё</button>
-    </div>
-    <div id="statsContainer"></div>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
-      </thead>
-      <tbody id="resultsBody"></tbody>
-    </table>
   </div>
 
   <!-- ============ Призы ============ -->
   <div id="panel-prizes" class="panel">
-    <div class="actions">
-      <button class="btn btn-green" onclick="showAddPrize()">➕ Добавить приз</button>
-    </div>
-    <div id="prizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-      <div id="prizeFormTitle" style="font-size:14px; font-weight:600; color:#ffd700; margin-bottom:12px;">Новый приз</div>
-      <input type="hidden" id="editPrizeId" value="">
-      <div class="form-group"><label>Текст приза</label><input id="newPrizeText" placeholder="Дополнительный выходной"></div>
-      <div class="form-group"><label>Иконка (эмодзи)</label><input id="newPrizeIcon" placeholder="🌴" maxlength="4"></div>
-      <div class="form-group"><label>Цвет</label><input id="newPrizeColor" type="color" value="#4A90D9"></div>
-      <div class="form-group"><label>Позиция</label><input id="newPrizePosition" type="number" min="1" max="100" value="1"></div>
-      <div class="form-group" id="prizeActiveGroup" style="display:none;">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" id="newPrizeActive" checked> Активен
-        </label>
+    <div class="panel-loading" id="loadingPrizes"><div class="panel-spinner"></div></div>
+    <div id="prizesContent" style="display:none;">
+      <div class="actions">
+        <button class="btn btn-green" onclick="showAddPrize()">➕ Добавить приз</button>
       </div>
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button class="btn btn-green" onclick="savePrize()">Сохранить</button>
-        <button class="btn btn-small" style="background:rgba(255,255,255,0.1);color:#ccc;" onclick="closePrizeForm()">Отмена</button>
+      <div id="prizeForm" style="display:none; background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+        <div id="prizeFormTitle" style="font-size:14px; font-weight:600; color:#ffd700; margin-bottom:12px;">Новый приз</div>
+        <input type="hidden" id="editPrizeId" value="">
+        <div class="form-group"><label>Текст приза</label><input id="newPrizeText" placeholder="Дополнительный выходной"></div>
+        <div class="form-group"><label>Иконка (эмодзи)</label><input id="newPrizeIcon" placeholder="🌴" maxlength="4"></div>
+        <div class="form-group"><label>Цвет</label><input id="newPrizeColor" type="color" value="#4A90D9"></div>
+        <div class="form-group"><label>Позиция</label><input id="newPrizePosition" type="number" min="1" max="100" value="1"></div>
+        <div class="form-group" id="prizeActiveGroup" style="display:none;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="newPrizeActive" checked> Активен
+          </label>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-green" onclick="savePrize()">Сохранить</button>
+          <button class="btn btn-small btn-ghost" onclick="closePrizeForm()">Отмена</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>№</th><th>Иконка</th><th>Приз</th><th>Цвет</th><th>Активен</th><th></th></tr>
+        </thead>
+        <tbody id="prizesBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyPrizes" style="display:none;">
+        <span class="empty-icon">🎁</span>
+        Нет призов — добавьте первый
       </div>
     </div>
-    <table>
-      <thead>
-        <tr><th>№</th><th>Иконка</th><th>Приз</th><th>Цвет</th><th>Активен</th><th></th></tr>
-      </thead>
-      <tbody id="prizesBody"></tbody>
-    </table>
   </div>
 
   <!-- ============ Настройки ============ -->
   <div id="panel-settings" class="panel">
-    <h3 style="font-size:14px; color:#ffd700; margin-bottom:12px;">Стиль указателя</h3>
-    <div class="style-options" id="pointerStyleOptions">
-      <div class="style-card" data-value="top" onclick="setPointerStyle('top')">
-        <span class="style-icon">⬇️</span>
-        <div class="style-label">Сверху</div>
-        <div class="style-desc">Стрелка сверху колеса, остриём к центру</div>
+    <div class="settings-section">
+      <h3>Стиль указателя</h3>
+      <div class="style-options" id="pointerStyleOptions">
+        <div class="style-card" data-value="top" onclick="setPointerStyle('top')">
+          <span class="style-icon">⬇️</span>
+          <div class="style-label">Сверху</div>
+          <div class="style-desc">Стрелка сверху колеса, остриём к центру</div>
+        </div>
+        <div class="style-card" data-value="center" onclick="setPointerStyle('center')">
+          <span class="style-icon">⬆️</span>
+          <div class="style-label">Из центра</div>
+          <div class="style-desc">Стрелка из хаба вверх, указывает на приз</div>
+        </div>
       </div>
-      <div class="style-card" data-value="center" onclick="setPointerStyle('center')">
-        <span class="style-icon">⬆️</span>
-        <div class="style-label">Из центра</div>
-        <div class="style-desc">Стрелка из хаба вверх, указывает на приз</div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Режим разработки</h3>
+      <div class="dev-toggle">
+        <label for="devModeSwitch">Колесо крутится без ограничений, результаты не сохраняются</label>
+        <label class="dev-switch">
+          <input type="checkbox" id="devModeSwitch" onchange="toggleDevMode(this.checked)">
+          <span class="slider"></span>
+        </label>
       </div>
     </div>
   </div>
 
   <!-- ============ Лог ============ -->
   <div id="panel-audit" class="panel">
-    <table>
-      <thead>
-        <tr><th>Дата</th><th>Админ</th><th>Действие</th><th>Детали</th></tr>
-      </thead>
-      <tbody id="auditBody"></tbody>
-    </table>
+    <div class="panel-loading" id="loadingAudit"><div class="panel-spinner"></div></div>
+    <div id="auditContent" style="display:none;">
+      <table>
+        <thead>
+          <tr><th>Дата</th><th>Админ</th><th>Действие</th><th>Детали</th></tr>
+        </thead>
+        <tbody id="auditBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyAudit" style="display:none;">
+        <span class="empty-icon">📋</span>
+        Лог пуст
+      </div>
+    </div>
   </div>
 
   <!-- ============ Доступ ============ -->
   <div id="panel-users" class="panel">
-    <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-      <div class="form-group"><label>Telegram ID</label><input id="newUserId" type="number" placeholder="123456789"></div>
-      <div class="form-group">
-        <label>Роль</label>
-        <select id="newUserRole"><option value="admin">Админ</option><option value="viewer">Просмотрщик</option></select>
+    <div class="panel-loading" id="loadingUsers"><div class="panel-spinner"></div></div>
+    <div id="usersContent" style="display:none;">
+      <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+        <div class="form-group"><label>Telegram ID</label><input id="newUserId" type="number" placeholder="123456789"></div>
+        <div class="form-group">
+          <label>Роль</label>
+          <select id="newUserRole"><option value="admin">Админ</option><option value="viewer">Просмотрщик</option></select>
+        </div>
+        <button class="btn btn-green" onclick="addUser()">Добавить</button>
       </div>
-      <button class="btn btn-green" onclick="addUser()">Добавить</button>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Telegram ID</th><th>Пользователь</th><th>Роль</th><th>Добавил</th><th></th></tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
     </div>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Telegram ID</th><th>Пользователь</th><th>Роль</th><th>Добавил</th><th></th></tr>
-      </thead>
-      <tbody id="usersBody"></tbody>
-    </table>
   </div>
 </div>
 
@@ -361,14 +549,57 @@ function headers() {
   return { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData };
 }
 
+// ---- Toast notifications ----
 function showMsg(text, ok) {
-  const el = document.getElementById('msg');
-  el.textContent = text;
-  el.className = 'msg ' + (ok ? 'ok' : 'err');
-  setTimeout(() => { el.className = 'msg'; }, 3000);
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (ok ? 'ok' : 'error');
+  t.textContent = text;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }
 
-const TAB_NAMES = { results: 'Результаты', prizes: 'Призы', users: 'Доступ', settings: 'Настройки', audit: 'Лог' };
+// ---- Custom confirm dialog ----
+function customConfirm(title, text) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('confirmOverlay');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmText').textContent = text;
+    overlay.classList.add('show');
+
+    function cleanup(result) {
+      overlay.classList.remove('show');
+      document.getElementById('confirmYes').removeEventListener('click', onYes);
+      document.getElementById('confirmNo').removeEventListener('click', onNo);
+      resolve(result);
+    }
+
+    function onYes() { cleanup(true); }
+    function onNo() { cleanup(false); }
+
+    document.getElementById('confirmYes').addEventListener('click', onYes);
+    document.getElementById('confirmNo').addEventListener('click', onNo);
+  });
+}
+
+// ---- Loading helpers ----
+function showLoading(panelName) {
+  const loader = document.getElementById('loading' + panelName);
+  const content = document.getElementById(panelName.toLowerCase() + 'Content');
+  if (loader) loader.classList.add('show');
+  if (content) content.style.display = 'none';
+}
+
+function hideLoading(panelName) {
+  const loader = document.getElementById('loading' + panelName);
+  const content = document.getElementById(panelName.toLowerCase() + 'Content');
+  if (loader) loader.classList.remove('show');
+  if (content) content.style.display = 'block';
+}
+
+// ---- Tabs ----
+const TAB_NAMES = { results: '📊 Результаты', prizes: '🎁 Призы', users: '👥 Доступ', settings: '⚙️ Настройки', audit: '📋 Лог' };
+
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.textContent.trim() === TAB_NAMES[name]);
@@ -386,6 +617,7 @@ function showTab(name) {
 let allResults = [];
 
 async function loadResults() {
+  showLoading('Results');
   try {
     const res = await fetch('/api/admin/results', { headers: headers() });
     if (!res.ok) throw new Error(res.status);
@@ -394,6 +626,7 @@ async function loadResults() {
     document.getElementById('searchResults').value = '';
     renderResults(allResults);
     renderStats();
+    hideLoading('Results');
   } catch (e) {
     document.getElementById('noAccess').style.display = 'block';
     document.getElementById('app').style.display = 'none';
@@ -414,27 +647,68 @@ function filterResults() {
 
 function renderResults(data) {
   const tbody = document.getElementById('resultsBody');
+  const empty = document.getElementById('emptyResults');
   tbody.innerHTML = '';
+
+  if (!data.length) {
+    empty.style.display = 'block';
+    tbody.parentElement.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.parentElement.style.display = '';
+
   data.forEach(s => {
     const tr = document.createElement('tr');
-    [s.id, s.tg_user_id, '@' + (s.tg_username || '—'), (s.tg_first_name || '') + ' ' + (s.tg_last_name || ''), s.prize_text, s.created_at ? new Date(s.created_at).toLocaleString('ru') : ''].forEach(val => {
-      const td = document.createElement('td');
-      td.textContent = val;
-      tr.appendChild(td);
-    });
+
+    const tdId = document.createElement('td');
+    tdId.textContent = s.id;
+    tdId.dataset.label = 'ID';
+    tdId.classList.add('hide-mobile');
+    tr.appendChild(tdId);
+
+    const tdTgId = document.createElement('td');
+    tdTgId.textContent = s.tg_user_id;
+    tdTgId.dataset.label = 'Telegram ID';
+    tdTgId.classList.add('hide-mobile');
+    tr.appendChild(tdTgId);
+
+    const tdUser = document.createElement('td');
+    tdUser.textContent = '@' + (s.tg_username || '—');
+    tdUser.dataset.label = 'Username';
+    tr.appendChild(tdUser);
+
+    const tdName = document.createElement('td');
+    tdName.textContent = ((s.tg_first_name || '') + ' ' + (s.tg_last_name || '')).trim() || '—';
+    tdName.dataset.label = 'Имя';
+    tr.appendChild(tdName);
+
+    const tdPrize = document.createElement('td');
+    tdPrize.textContent = s.prize_text;
+    tdPrize.dataset.label = 'Приз';
+    tr.appendChild(tdPrize);
+
+    const tdDate = document.createElement('td');
+    tdDate.textContent = s.created_at ? new Date(s.created_at).toLocaleString('ru') : '';
+    tdDate.dataset.label = 'Дата';
+    tr.appendChild(tdDate);
+
     const tdBtn = document.createElement('td');
+    tdBtn.className = 'td-actions';
     const btn = document.createElement('button');
     btn.className = 'btn btn-red btn-small';
     btn.textContent = '✕';
     btn.addEventListener('click', () => deleteResult(s.id));
     tdBtn.appendChild(btn);
     tr.appendChild(tdBtn);
+
     tbody.appendChild(tr);
   });
 }
 
 async function deleteResult(id) {
-  if (!confirm('Удалить запись #' + id + '?')) return;
+  const ok = await customConfirm('Удалить запись', 'Удалить запись вращения #' + id + '?');
+  if (!ok) return;
   try {
     const res = await fetch('/api/admin/results/' + id, { method: 'DELETE', headers: headers() });
     if (res.ok) { showMsg('Запись удалена', true); loadResults(); }
@@ -443,7 +717,8 @@ async function deleteResult(id) {
 }
 
 async function resetResults() {
-  if (!confirm('Сбросить ВСЕ результаты? Все пользователи смогут крутить заново.')) return;
+  const ok = await customConfirm('Сбросить всё', 'Сбросить ВСЕ результаты? Все пользователи смогут крутить заново.');
+  if (!ok) return;
   try {
     const res = await fetch('/api/admin/reset', { method: 'POST', headers: headers() });
     if (res.ok) { showMsg('Все результаты сброшены', true); loadResults(); }
@@ -457,10 +732,10 @@ async function exportCSV() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
 
-    // В Telegram WebView: копируем в буфер обмена (самый надёжный способ)
+    // В Telegram WebView: копируем в буфер обмена
     if (tg) {
       await navigator.clipboard.writeText(text);
-      showMsg('CSV скопирован в буфер обмена — вставьте в файл или чат', true);
+      showMsg('CSV скопирован в буфер обмена', true);
       return;
     }
 
@@ -480,27 +755,61 @@ async function exportCSV() {
 
 // ---- Призы ----
 async function loadPrizes() {
+  showLoading('Prizes');
   try {
     const res = await fetch('/api/admin/prizes', { headers: headers() });
-    if (!res.ok) { showMsg('Ошибка загрузки призов', false); return; }
+    if (!res.ok) { showMsg('Ошибка загрузки призов', false); hideLoading('Prizes'); return; }
     var data = await res.json();
-  } catch (e) { showMsg('Сетевая ошибка', false); return; }
+  } catch (e) { showMsg('Сетевая ошибка', false); hideLoading('Prizes'); return; }
+
   const tbody = document.getElementById('prizesBody');
+  const empty = document.getElementById('emptyPrizes');
   tbody.innerHTML = '';
+
+  if (!data.length) {
+    empty.style.display = 'block';
+    tbody.parentElement.style.display = 'none';
+    hideLoading('Prizes');
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.parentElement.style.display = '';
+
   data.forEach(p => {
     const tr = document.createElement('tr');
     tr.dataset.prizeId = p.id;
-    const tdPos = document.createElement('td'); tdPos.textContent = p.position; tr.appendChild(tdPos);
-    const tdIcon = document.createElement('td'); tdIcon.style.fontSize = '20px'; tdIcon.textContent = p.icon; tr.appendChild(tdIcon);
-    const tdText = document.createElement('td'); tdText.textContent = p.text; tr.appendChild(tdText);
+
+    const tdPos = document.createElement('td');
+    tdPos.textContent = p.position;
+    tdPos.dataset.label = '№';
+    tr.appendChild(tdPos);
+
+    const tdIcon = document.createElement('td');
+    tdIcon.style.fontSize = '20px';
+    tdIcon.textContent = p.icon;
+    tdIcon.dataset.label = 'Иконка';
+    tr.appendChild(tdIcon);
+
+    const tdText = document.createElement('td');
+    tdText.textContent = p.text;
+    tdText.dataset.label = 'Приз';
+    tr.appendChild(tdText);
+
     const tdColor = document.createElement('td');
+    tdColor.dataset.label = 'Цвет';
     const span = document.createElement('span');
-    span.style.cssText = 'display:inline-block;width:20px;height:20px;border-radius:4px;background:' + p.color;
+    span.style.cssText = 'display:inline-block;width:20px;height:20px;border-radius:4px;background:' + p.color + ';vertical-align:middle;';
     tdColor.appendChild(span);
     tdColor.append(' ' + p.color);
     tr.appendChild(tdColor);
-    const tdActive = document.createElement('td'); tdActive.textContent = p.is_active ? '✅' : '❌'; tr.appendChild(tdActive);
+
+    const tdActive = document.createElement('td');
+    tdActive.textContent = p.is_active ? '✅' : '❌';
+    tdActive.dataset.label = 'Активен';
+    tr.appendChild(tdActive);
+
     const tdBtn = document.createElement('td');
+    tdBtn.className = 'td-actions';
     tdBtn.style.cssText = 'display:flex; gap:4px;';
     const btnEdit = document.createElement('button');
     btnEdit.className = 'btn btn-gold btn-small';
@@ -513,9 +822,11 @@ async function loadPrizes() {
     btn.addEventListener('click', () => deletePrize(p.id));
     tdBtn.appendChild(btn);
     tr.appendChild(tdBtn);
+
     tbody.appendChild(tr);
   });
   enablePrizeDragDrop();
+  hideLoading('Prizes');
 }
 
 function showAddPrize() {
@@ -583,7 +894,8 @@ async function savePrize() {
 }
 
 async function deletePrize(id) {
-  if (!confirm('Удалить приз #' + id + '?')) return;
+  const ok = await customConfirm('Удалить приз', 'Удалить приз #' + id + '?');
+  if (!ok) return;
   try {
     const res = await fetch('/api/admin/prizes/' + id, { method: 'DELETE', headers: headers() });
     if (res.ok) { showMsg('Приз удалён', true); loadPrizes(); }
@@ -596,33 +908,63 @@ async function deletePrize(id) {
 
 // ---- Пользователи ----
 async function loadUsers() {
+  showLoading('Users');
   let data;
   try {
     const res = await fetch('/api/admin/users', { headers: headers() });
-    if (!res.ok) { showMsg('Ошибка загрузки пользователей', false); return; }
+    if (!res.ok) { showMsg('Ошибка загрузки пользователей', false); hideLoading('Users'); return; }
     data = await res.json();
-  } catch (e) { showMsg('Сетевая ошибка', false); return; }
+  } catch (e) { showMsg('Сетевая ошибка', false); hideLoading('Users'); return; }
+
   const tbody = document.getElementById('usersBody');
   tbody.innerHTML = '';
+
   data.forEach(u => {
     const tr = document.createElement('tr');
     const userDisplay = u.tg_first_name
       ? u.tg_first_name + (u.tg_username ? ' (@' + u.tg_username + ')' : '')
       : (u.tg_username ? '@' + u.tg_username : '—');
-    [u.id, u.tg_user_id, userDisplay, u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик', u.added_by || '—'].forEach(val => {
-      const td = document.createElement('td');
-      td.textContent = val;
-      tr.appendChild(td);
-    });
+
+    const tdId = document.createElement('td');
+    tdId.textContent = u.id;
+    tdId.dataset.label = 'ID';
+    tdId.classList.add('hide-mobile');
+    tr.appendChild(tdId);
+
+    const tdTgId = document.createElement('td');
+    tdTgId.textContent = u.tg_user_id;
+    tdTgId.dataset.label = 'Telegram ID';
+    tdTgId.classList.add('hide-mobile');
+    tr.appendChild(tdTgId);
+
+    const tdUser = document.createElement('td');
+    tdUser.textContent = userDisplay;
+    tdUser.dataset.label = 'Пользователь';
+    tr.appendChild(tdUser);
+
+    const tdRole = document.createElement('td');
+    tdRole.textContent = u.role === 'admin' ? '👑 Админ' : '👁 Просмотрщик';
+    tdRole.dataset.label = 'Роль';
+    tr.appendChild(tdRole);
+
+    const tdAdded = document.createElement('td');
+    tdAdded.textContent = u.added_by || '—';
+    tdAdded.dataset.label = 'Добавил';
+    tdAdded.classList.add('hide-mobile');
+    tr.appendChild(tdAdded);
+
     const tdBtn = document.createElement('td');
+    tdBtn.className = 'td-actions';
     const btn = document.createElement('button');
     btn.className = 'btn btn-red btn-small';
     btn.textContent = '✕';
     btn.addEventListener('click', () => deleteUser(u.id));
     tdBtn.appendChild(btn);
     tr.appendChild(tdBtn);
+
     tbody.appendChild(tr);
   });
+  hideLoading('Users');
 }
 
 async function addUser() {
@@ -648,7 +990,8 @@ async function addUser() {
 }
 
 async function deleteUser(id) {
-  if (!confirm('Удалить пользователя?')) return;
+  const ok = await customConfirm('Удалить пользователя', 'Удалить пользователя из системы?');
+  if (!ok) return;
   try {
     const res = await fetch('/api/admin/users/' + id, { method: 'DELETE', headers: headers() });
     if (res.ok) { showMsg('Удалено', true); loadUsers(); }
@@ -868,35 +1211,61 @@ const ACTION_LABELS = {
 };
 
 async function loadAudit() {
+  showLoading('Audit');
   try {
     const res = await fetch('/api/admin/audit', { headers: headers() });
-    if (!res.ok) return;
+    if (!res.ok) { hideLoading('Audit'); return; }
     const data = await res.json();
     const tbody = document.getElementById('auditBody');
+    const empty = document.getElementById('emptyAudit');
     tbody.innerHTML = '';
+
+    if (!data.length) {
+      empty.style.display = 'block';
+      tbody.parentElement.style.display = 'none';
+      hideLoading('Audit');
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.parentElement.style.display = '';
+
     data.forEach(log => {
       const tr = document.createElement('tr');
+
       const tdDate = document.createElement('td');
       tdDate.textContent = log.created_at ? new Date(log.created_at).toLocaleString('ru') : '';
+      tdDate.dataset.label = 'Дата';
       tr.appendChild(tdDate);
+
       const tdAdmin = document.createElement('td');
       tdAdmin.textContent = log.admin_name || log.admin_id;
+      tdAdmin.dataset.label = 'Админ';
+      tdAdmin.classList.add('hide-mobile');
       tr.appendChild(tdAdmin);
+
       const tdAction = document.createElement('td');
+      tdAction.dataset.label = 'Действие';
       const badge = document.createElement('span');
       badge.className = 'action-badge';
       badge.textContent = ACTION_LABELS[log.action] || log.action;
       tdAction.appendChild(badge);
       tr.appendChild(tdAction);
+
       const tdDetails = document.createElement('td');
-      tdDetails.textContent = log.details || '';
+      // На мобильном добавляем имя админа в детали
+      const adminPrefix = log.admin_name ? log.admin_name + ': ' : '';
+      tdDetails.textContent = adminPrefix + (log.details || '');
+      tdDetails.dataset.label = 'Детали';
       tdDetails.style.color = 'rgba(255,255,255,0.6)';
       tdDetails.style.fontSize = '12px';
       tr.appendChild(tdDetails);
+
       tbody.appendChild(tr);
     });
+    hideLoading('Audit');
   } catch (e) {
     console.error('Ошибка загрузки аудит-лога:', e);
+    hideLoading('Audit');
   }
 }
 

@@ -65,7 +65,7 @@ FastAPI + aiogram polling работают в одном процессе:
 ### Frontend
 
 - `frontend/index.html` — Mini App с колесом. Призы загружаются из `GET /api/prizes` с fallback на захардкоженные. Canvas: два слоя (колесо 300×300 + лампочки 360×360), внутренняя разметка процентная для масштабирования. Размер колеса адаптируется под высоту экрана через `min(320px, 80vw, 42dvh)`. Telegram WebApp SDK для авторизации и HapticFeedback. Звуковые эффекты через Web Audio API (тиканье секторов + фанфары). Loading-спиннер, toast-уведомления об ошибках, BackButton для модалки. Два стиля указателя: top (стрелка сверху) и center (стрелка из хаба вверх) — переключается в админке. Поддерживает режим разработки (dev mode) через `localStorage`.
-- `frontend/admin.html` — админка с пятью вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика), Призы (CRUD + drag & drop сортировка), Доступ (управление ролями), Настройки (стиль указателя колеса), Лог (аудит-лог). Toggle «Режим разработки», BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
+- `frontend/admin.html` — админка с пятью вкладками: Результаты (поиск, удаление, CSV-экспорт, статистика), Призы (CRUD + drag & drop сортировка), Доступ (управление ролями), Настройки (стиль указателя + режим разработки), Лог (аудит-лог). Mobile-first: на экранах <600px таблицы заменяются карточками (CSS `data-label` + `::before`), ненужные колонки скрываются (`.hide-mobile`). Toast-уведомления (fixed bottom), кастомный confirm-диалог вместо browser `confirm()`, loading-спиннеры при загрузке данных, пустые состояния для таблиц. BackButton для закрытия. Авторизация через `X-Telegram-Init-Data` заголовок.
 
 ### API (`bot/api/routes.py`)
 
@@ -107,6 +107,10 @@ SQLite, пять таблиц: `prizes`, `spins`, `admins`, `audit_log`, `settin
 - **log_audit() отказоустойчивость**: обёрнут в try-except + `logger.exception()` — ошибка записи аудита не должна ломать основной запрос
 - **Drag & Drop утечка обработчиков**: `enablePrizeDragDrop()` вызывается при каждом `loadPrizes()` — обязательно `removeEventListener` перед `addEventListener`
 - **Fetch без try-catch**: все admin fetch-вызовы должны иметь try-catch с показом `showMsg('Сетевая ошибка')`, иначе при обрыве сети — необработанный Promise rejection
+- **Админка: таблицы на мобильном**: на экранах <600px CSS превращает `<tr>` в карточки через `display: block` + `data-label` атрибуты на `<td>` + `::before` pseudo-элементы. Колонки с `.hide-mobile` скрываются. В аудит-логе имя админа добавляется в детали (т.к. столбец «Админ» скрыт)
+- **Админка: confirm()**: заменён на кастомный `customConfirm(title, text)` → Promise<boolean>. Styled modal в тёмной теме
+- **Админка: Toast**: `showMsg()` теперь создаёт fixed-position toast внизу экрана (вместо `#msg` div вверху). Авто-удаление через 3.5с
+- **Админка: Dev mode**: перенесён из основного layout в вкладку «Настройки»
 - **SQLite WAL mode**: обязательно `PRAGMA journal_mode=WAL` при init_db() — позволяет читать во время записи. Без WAL при 300 одновременных запросах будут ошибки «database is locked»
 - **SQLite busy_timeout**: `connect_args={"timeout": 5}` в create_async_engine — при блокировке ждёт 5 сек вместо мгновенной ошибки
 - **Rate limiting по реальному IP**: nginx видит IP Nginx Proxy Manager (192.168.5.4), а не пользователя. Используем `map $http_x_real_ip` для получения реального IP из заголовка, иначе все 300 пользователей делят лимит 5 req/s
