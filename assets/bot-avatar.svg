@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f0c29"/>
+      <stop offset="50%" stop-color="#302b63"/>
+      <stop offset="100%" stop-color="#24243e"/>
+    </linearGradient>
+    <radialGradient id="hub" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#fff7b0"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  
+  <!-- Stars -->
+  <circle cx="80" cy="60" r="2" fill="white" opacity="0.6"/>
+  <circle cx="430" cy="90" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="50" cy="400" r="2" fill="white" opacity="0.4"/>
+  <circle cx="460" cy="380" r="1.5" fill="white" opacity="0.7"/>
+  <circle cx="120" cy="450" r="1" fill="white" opacity="0.5"/>
+  <circle cx="400" cy="450" r="2" fill="white" opacity="0.3"/>
+  <circle cx="70" cy="200" r="1.5" fill="white" opacity="0.6"/>
+  <circle cx="440" cy="230" r="1" fill="white" opacity="0.4"/>
+  
+  <!-- Red outer ring -->
+  <circle cx="256" cy="240" r="175" fill="none" stroke="#c0392b" stroke-width="28"/>
+  <circle cx="256" cy="240" r="163" fill="none" stroke="#d4a017" stroke-width="2"/>
+  
+  <!-- Light bulbs -->
+  <g>
+    <circle cx="256" cy="67" r="7" fill="#fffde0"/>
+    <circle cx="343" cy="78" r="7" fill="#8b7355"/>
+    <circle cx="410" cy="120" r="7" fill="#fffde0"/>
+    <circle cx="442" cy="184" r="7" fill="#8b7355"/>
+    <circle cx="431" cy="260" r="7" fill="#fffde0"/>
+    <circle cx="410" cy="340" r="7" fill="#8b7355"/>
+    <circle cx="356" cy="395" r="7" fill="#fffde0"/>
+    <circle cx="280" cy="414" r="7" fill="#8b7355"/>
+    <circle cx="210" cy="410" r="7" fill="#fffde0"/>
+    <circle cx="150" cy="380" r="7" fill="#8b7355"/>
+    <circle cx="100" cy="330" r="7" fill="#fffde0"/>
+    <circle cx="82" cy="260" r="7" fill="#8b7355"/>
+    <circle cx="85" cy="190" r="7" fill="#fffde0"/>
+    <circle cx="110" cy="125" r="7" fill="#8b7355"/>
+    <circle cx="170" cy="82" r="7" fill="#fffde0"/>
+  </g>
+  
+  <!-- Wheel segments -->
+  <g transform="translate(256,240)">
+    <!-- Segment 1 - Blue -->
+    <path d="M0,0 L0,-155 A155,155 0 0,1 134.35,-77.5 Z" fill="#4A90D9"/>
+    <!-- Segment 2 - Orange -->
+    <path d="M0,0 L134.35,-77.5 A155,155 0 0,1 134.35,77.5 Z" fill="#E8734A"/>
+    <!-- Segment 3 - Yellow -->
+    <path d="M0,0 L134.35,77.5 A155,155 0 0,1 0,155 Z" fill="#F5C242"/>
+    <!-- Segment 4 - Red -->
+    <path d="M0,0 L0,155 A155,155 0 0,1 -134.35,77.5 Z" fill="#D95B5B"/>
+    <!-- Segment 5 - Green -->
+    <path d="M0,0 L-134.35,77.5 A155,155 0 0,1 -134.35,-77.5 Z" fill="#5BBD8C"/>
+    <!-- Segment 6 - Purple -->
+    <path d="M0,0 L-134.35,-77.5 A155,155 0 0,1 0,-155 Z" fill="#9B6EC5"/>
+    
+    <!-- Number badges -->
+    <circle cx="0" cy="-90" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="0" y="-84" text-anchor="middle" font-size="20" font-weight="bold" fill="#4A90D9">1</text>
+    
+    <circle cx="78" cy="-45" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="78" y="-39" text-anchor="middle" font-size="20" font-weight="bold" fill="#E8734A">2</text>
+    
+    <circle cx="78" cy="45" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="78" y="51" text-anchor="middle" font-size="20" font-weight="bold" fill="#F5C242">3</text>
+    
+    <circle cx="0" cy="90" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="0" y="96" text-anchor="middle" font-size="20" font-weight="bold" fill="#D95B5B">4</text>
+    
+    <circle cx="-78" cy="45" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="-78" y="51" text-anchor="middle" font-size="20" font-weight="bold" fill="#5BBD8C">5</text>
+    
+    <circle cx="-78" cy="-45" r="20" fill="rgba(255,255,255,0.9)"/>
+    <text x="-78" y="-39" text-anchor="middle" font-size="20" font-weight="bold" fill="#9B6EC5">6</text>
+    
+    <!-- Center hub -->
+    <circle cx="0" cy="0" r="28" fill="url(#hub)" stroke="#a07000" stroke-width="2"/>
+    <circle cx="0" cy="0" r="13" fill="#ffe566"/>
+  </g>
+  
+  <!-- Pointer -->
+  <polygon points="256,50 244,80 248,80 248,90 264,90 264,80 268,80" fill="url(#hub)" stroke="#a07000" stroke-width="1" transform="rotate(180,256,70)"/>
+  
+  <!-- Title -->
+  <text x="256" y="475" text-anchor="middle" font-size="32" font-weight="bold" fill="#ffd700" font-family="-apple-system, BlinkMacSystemFont, sans-serif">Колесо Фортуны</text>
+</svg>
