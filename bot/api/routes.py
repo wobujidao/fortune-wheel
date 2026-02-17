@@ -368,7 +368,7 @@ async def export_results(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        ["ID", "Telegram ID", "Username", "Имя", "Фамилия", "ФИО", "Приз ID", "Приз", "Дата"]
+        ["ID", "Telegram ID", "Username", "Имя в TG", "Фамилия в TG", "ФИО", "Приз ID", "Приз", "Дата"]
     )
     for s in spins:
         writer.writerow([

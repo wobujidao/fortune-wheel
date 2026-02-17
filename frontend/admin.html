@@ -413,7 +413,7 @@
         <div class="label">всего вращений</div>
       </div>
       <div class="form-group" style="margin-bottom:12px">
-        <input id="searchResults" type="text" placeholder="🔍 Поиск по имени, username или ID..." oninput="filterResults()">
+        <input id="searchResults" type="text" placeholder="🔍 Поиск по ФИО, имени, username или ID..." oninput="filterResults()">
       </div>
       <div class="actions">
         <button class="btn btn-gold" onclick="exportCSV()">📥 CSV</button>
@@ -422,7 +422,7 @@
       <div id="statsContainer"></div>
       <table>
         <thead>
-          <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>ФИО</th><th>Приз</th><th>Дата</th><th></th></tr>
+          <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя в Telegram</th><th>ФИО</th><th>Приз</th><th>Дата</th><th></th></tr>
         </thead>
         <tbody id="resultsBody"></tbody>
       </table>
@@ -702,7 +702,7 @@ function renderResults(data) {
 
     const tdName = document.createElement('td');
     tdName.textContent = ((s.tg_first_name || '') + ' ' + (s.tg_last_name || '')).trim() || '—';
-    tdName.dataset.label = 'Имя';
+    tdName.dataset.label = 'Имя в TG';
     tr.appendChild(tdName);
 
     const tdFio = document.createElement('td');
