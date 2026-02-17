@@ -58,6 +58,10 @@ class PrizeOut(BaseModel):
     is_active: bool
 
 
+class SpinRequest(BaseModel):
+    fio: str | None = Field(None, max_length=200)
+
+
 class SpinOut(BaseModel):
     prize_id: int
     prize_text: str
@@ -76,6 +80,7 @@ class SpinResultOut(BaseModel):
     tg_username: str | None
     tg_first_name: str | None
     tg_last_name: str | None
+    fio: str | None = None
     prize_id: int
     prize_text: str
     created_at: str
@@ -132,6 +137,7 @@ class SettingUpdate(BaseModel):
 
 ALLOWED_SETTINGS: dict[str, list[str]] = {
     "pointer_style": ["top", "center"],
+    "require_fio": ["true", "false"],
 }
 
 
@@ -170,11 +176,25 @@ async def get_prizes() -> list[PrizeOut]:
 
 
 @public_router.post("/spin", response_model=SpinOut)
-async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
+async def spin(
+    user: dict[str, Any] = Depends(get_current_user),
+    body: SpinRequest | None = None,
+) -> SpinOut:
     """Крутить колесо — возвращает приз. Одна попытка на пользователя."""
     tg_user_id = user["id"]
 
     async with async_session() as session:
+        # Проверяем, требуется ли ФИО
+        fio_setting = await session.execute(
+            select(Setting).where(Setting.key == "require_fio")
+        )
+        setting = fio_setting.scalar_one_or_none()
+        fio_required = setting is not None and setting.value == "true"
+
+        fio_value = (body.fio.strip() if body and body.fio else None)
+        if fio_required and not fio_value:
+            raise HTTPException(status_code=422, detail="Укажите ФИО")
+
         # Получаем активные призы
         result = await session.execute(
             select(Prize)
@@ -194,6 +214,7 @@ async def spin(user: dict[str, Any] = Depends(get_current_user)) -> SpinOut:
             tg_username=user.get("username"),
             tg_first_name=user.get("first_name"),
             tg_last_name=user.get("last_name"),
+            fio=fio_value,
             prize_id=prize.id,
             prize_text=prize.text,
         )
@@ -264,6 +285,7 @@ async def get_results(
             tg_username=s.tg_username,
             tg_first_name=s.tg_first_name,
             tg_last_name=s.tg_last_name,
+            fio=s.fio,
             prize_id=s.prize_id,
             prize_text=s.prize_text,
             created_at=s.created_at.isoformat() if s.created_at else "",
@@ -346,7 +368,7 @@ async def export_results(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(
-        ["ID", "Telegram ID", "Username", "Имя", "Фамилия", "Приз ID", "Приз", "Дата"]
+        ["ID", "Telegram ID", "Username", "Имя", "Фамилия", "ФИО", "Приз ID", "Приз", "Дата"]
     )
     for s in spins:
         writer.writerow([
@@ -355,6 +377,7 @@ async def export_results(
             s.tg_username or "",
             s.tg_first_name or "",
             s.tg_last_name or "",
+            s.fio or "",
             s.prize_id,
             s.prize_text or "",
             s.created_at.isoformat() if s.created_at else "",

@@ -422,7 +422,7 @@
       <div id="statsContainer"></div>
       <table>
         <thead>
-          <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>Приз</th><th>Дата</th><th></th></tr>
+          <tr><th>ID</th><th>Telegram ID</th><th>Username</th><th>Имя</th><th>ФИО</th><th>Приз</th><th>Дата</th><th></th></tr>
         </thead>
         <tbody id="resultsBody"></tbody>
       </table>
@@ -485,6 +485,17 @@
           <div class="style-label">Из центра</div>
           <div class="style-desc">Стрелка из хаба вверх, указывает на приз</div>
         </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Запрос ФИО</h3>
+      <div class="dev-toggle">
+        <label for="requireFioSwitch">Перед вращением запрашивать Фамилию, Имя и Отчество</label>
+        <label class="dev-switch">
+          <input type="checkbox" id="requireFioSwitch" onchange="toggleRequireFio(this.checked)">
+          <span class="slider"></span>
+        </label>
       </div>
     </div>
 
@@ -651,6 +662,7 @@ function filterResults() {
     (s.tg_username || '').toLowerCase().includes(q) ||
     (s.tg_first_name || '').toLowerCase().includes(q) ||
     (s.tg_last_name || '').toLowerCase().includes(q) ||
+    (s.fio || '').toLowerCase().includes(q) ||
     String(s.tg_user_id).includes(q)
   );
   renderResults(filtered);
@@ -692,6 +704,11 @@ function renderResults(data) {
     tdName.textContent = ((s.tg_first_name || '') + ' ' + (s.tg_last_name || '')).trim() || '—';
     tdName.dataset.label = 'Имя';
     tr.appendChild(tdName);
+
+    const tdFio = document.createElement('td');
+    tdFio.textContent = s.fio || '—';
+    tdFio.dataset.label = 'ФИО';
+    tr.appendChild(tdFio);
 
     const tdPrize = document.createElement('td');
     tdPrize.textContent = s.prize_text;
@@ -1184,6 +1201,7 @@ async function loadSettings() {
     if (!res.ok) return;
     const data = await res.json();
     highlightPointerStyle(data.pointer_style || 'top');
+    document.getElementById('requireFioSwitch').checked = data.require_fio === 'true';
   } catch {}
 }
 
@@ -1208,6 +1226,27 @@ async function setPointerStyle(value) {
       showMsg(err.detail || 'Ошибка', false);
     }
   } catch { showMsg('Сетевая ошибка', false); }
+}
+
+// ---- Запрос ФИО ----
+async function toggleRequireFio(on) {
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ key: 'require_fio', value: on ? 'true' : 'false' })
+    });
+    if (res.ok) {
+      showMsg(on ? 'Запрос ФИО включён' : 'Запрос ФИО выключен', true);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showMsg(err.detail || 'Ошибка', false);
+      document.getElementById('requireFioSwitch').checked = !on;
+    }
+  } catch {
+    showMsg('Сетевая ошибка', false);
+    document.getElementById('requireFioSwitch').checked = !on;
+  }
 }
 
 // ---- Аудит-лог ----

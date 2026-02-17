@@ -34,15 +34,20 @@ async def init_db() -> None:
         await conn.execute(text("PRAGMA busy_timeout=5000"))
         await conn.run_sync(Base.metadata.create_all)
 
-        # Миграция: добавляем колонки к admins, если их нет
-        def _migrate_admins(sync_conn: object) -> None:
+        # Миграции
+        def _run_migrations(sync_conn: object) -> None:
+            # admins: добавляем колонки, если их нет
             cols = [c["name"] for c in inspect(sync_conn).get_columns("admins")]
             if "tg_username" not in cols:
                 sync_conn.execute(text("ALTER TABLE admins ADD COLUMN tg_username TEXT"))  # type: ignore[union-attr]
             if "tg_first_name" not in cols:
                 sync_conn.execute(text("ALTER TABLE admins ADD COLUMN tg_first_name TEXT"))  # type: ignore[union-attr]
+            # spins: добавляем колонку fio, если её нет
+            spin_cols = [c["name"] for c in inspect(sync_conn).get_columns("spins")]
+            if "fio" not in spin_cols:
+                sync_conn.execute(text("ALTER TABLE spins ADD COLUMN fio TEXT"))  # type: ignore[union-attr]
 
-        await conn.run_sync(_migrate_admins)
+        await conn.run_sync(_run_migrations)
 
     async with async_session() as session:
         # Сидируем призы, если таблица пуста
@@ -59,6 +64,13 @@ async def init_db() -> None:
         if result.scalar_one_or_none() is None:
             session.add(Setting(key="pointer_style", value="top"))
             logger.info("Сидирована настройка pointer_style=top")
+
+        result = await session.execute(
+            select(Setting).where(Setting.key == "require_fio")
+        )
+        if result.scalar_one_or_none() is None:
+            session.add(Setting(key="require_fio", value="false"))
+            logger.info("Сидирована настройка require_fio=false")
 
         # Сидируем начальных админов из ADMIN_IDS
         for admin_id in ADMIN_IDS:

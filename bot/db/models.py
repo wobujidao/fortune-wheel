@@ -37,6 +37,7 @@ class Spin(Base):
     tg_username: Mapped[str | None] = mapped_column(Text, nullable=True)
     tg_first_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     tg_last_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fio: Mapped[str | None] = mapped_column(Text, nullable=True)
     prize_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("prizes.id"), nullable=False
     )

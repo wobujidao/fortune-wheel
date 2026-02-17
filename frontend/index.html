@@ -364,6 +364,43 @@
   @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
 
+  /* FIO form */
+  .fio-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeIn 0.3s ease;
+  }
+  .fio-form label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: -4px;
+  }
+  .fio-form input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,215,0,0.3);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .fio-form input:focus {
+    border-color: #ffd700;
+  }
+  .fio-form input::placeholder {
+    color: rgba(255,255,255,0.3);
+  }
+  .fio-form .fio-error {
+    color: #ff6b6b;
+    font-size: 12px;
+    display: none;
+  }
+
   /* Sound toggle */
   .sound-toggle {
     position: fixed;
@@ -431,9 +468,23 @@
   <div class="legend" id="legend"></div>
 
   <div id="controls">
-    <button class="spin-btn" id="spinBtn" onclick="spin()">
+    <button class="spin-btn" id="spinBtn" onclick="onSpinClick()">
       <span class="shimmer"></span>
       Испытай удачу!
+    </button>
+  </div>
+
+  <div id="fioForm" style="display:none;" class="fio-form">
+    <label for="fioLastName">Фамилия</label>
+    <input type="text" id="fioLastName" placeholder="Иванов" autocomplete="off">
+    <label for="fioFirstName">Имя</label>
+    <input type="text" id="fioFirstName" placeholder="Иван" autocomplete="off">
+    <label for="fioPatronymic">Отчество</label>
+    <input type="text" id="fioPatronymic" placeholder="Иванович" autocomplete="off">
+    <div class="fio-error" id="fioError">Заполните все поля (минимум 2 символа)</div>
+    <button class="spin-btn" onclick="submitFio()">
+      <span class="shimmer"></span>
+      Крутить!
     </button>
   </div>
 
@@ -476,6 +527,8 @@ let spinning = false;
 let hasPlayed = false;
 let userResult = null;
 let pointerStyle = 'top';
+let requireFio = false;
+let pendingFio = null;
 const devMode = localStorage.getItem('devMode') === '1';
 
 // ---- Toast ----
@@ -587,6 +640,7 @@ async function init() {
     if (sRes.ok) {
       const settings = await sRes.json();
       if (settings.pointer_style) applyPointerStyle(settings.pointer_style);
+      if (settings.require_fio === 'true') requireFio = true;
     }
   } catch {}
 
@@ -788,6 +842,36 @@ function drawWheel(angle) {
   ctx.restore();
 }
 
+// ---- ФИО ----
+function onSpinClick() {
+  if (spinning || hasPlayed) return;
+  if (requireFio && !devMode) {
+    document.getElementById('controls').style.display = 'none';
+    document.getElementById('fioForm').style.display = 'flex';
+    document.getElementById('fioLastName').focus();
+    return;
+  }
+  spin();
+}
+
+function submitFio() {
+  const lastName = document.getElementById('fioLastName').value.trim();
+  const firstName = document.getElementById('fioFirstName').value.trim();
+  const patronymic = document.getElementById('fioPatronymic').value.trim();
+  const errEl = document.getElementById('fioError');
+
+  if (lastName.length < 2 || firstName.length < 2 || patronymic.length < 2) {
+    errEl.style.display = 'block';
+    haptic('notificationOccurred', 'error');
+    return;
+  }
+  errEl.style.display = 'none';
+  pendingFio = lastName + ' ' + firstName + ' ' + patronymic;
+  document.getElementById('fioForm').style.display = 'none';
+  document.getElementById('controls').style.display = '';
+  spin();
+}
+
 // ---- Вращение с запросом к API ----
 async function spin() {
   if (spinning || hasPlayed) return;
@@ -806,7 +890,8 @@ async function spin() {
     // Запрашиваем приз у сервера
     let serverPrize = null;
     try {
-      const res = await fetch('/api/spin', { method: 'POST', headers: apiHeaders() });
+      const spinBody = pendingFio ? JSON.stringify({ fio: pendingFio }) : undefined;
+      const res = await fetch('/api/spin', { method: 'POST', headers: apiHeaders(), body: spinBody });
       if (res.ok) {
         serverPrize = await res.json();
       } else {
